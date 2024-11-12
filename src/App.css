@@ -1,0 +1,15 @@
+*,
+:before,
+:after {
+  --at-apply: box-border;
+  --at-apply: border-0;
+  --at-apply: border-solid;
+}
+
+body {
+  background-color: hsl(var(--background) / 0.5);
+}
+
+.link {
+  --at-apply: "text-primary underline-offset-4 hover:underline";
+}

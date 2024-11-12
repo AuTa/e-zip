@@ -1,0 +1,56 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "cppvsdbg",
+            "request": "launch",
+            "name": "Windows Tauri Development Debug",
+            "cwd": "${workspaceFolder}",
+            "program": "${workspaceRoot}/src-tauri/target/debug/e-zip.exe",
+            // task for the `beforeDevCommand` if used, must be configured in `.vscode/tasks.json`
+            "preLaunchTask": "tauri:dev",
+            "postDebugTask": "Terminate All Tasks"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Tauri Development Debug",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--manifest-path=./src-tauri/Cargo.toml",
+                    "--no-default-features"
+                ]
+            },
+            // task for the `beforeDevCommand` if used, must be configured in `.vscode/tasks.json`
+            "preLaunchTask": "ui:dev"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Tauri Production Debug",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--release",
+                    "--manifest-path=./src-tauri/Cargo.toml"
+                ]
+            },
+            // task for the `beforeBuildCommand` if used, must be configured in `.vscode/tasks.json`
+            "preLaunchTask": "ui:build"
+        },
+        {
+            "name": "Front-end App Debug",
+            "type": "msedge",
+            "request": "launch",
+            "version": "stable",
+            "runtimeExecutable": "${workspaceFolder}/src-tauri/target/debug/e-zip.exe", // Path to your app in debug mode.
+            "useWebView": true,
+            "webRoot": "${workspaceFolder}",
+            "preLaunchTask": "ui:dev",
+        },
+    ]
+}

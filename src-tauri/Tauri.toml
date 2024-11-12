@@ -1,0 +1,32 @@
+productName = "E Zip"
+version = "0.1.0"
+identifier = "E-Zip"
+
+[app]
+macOSPrivateApi = true
+
+[build]
+beforeDevCommand = "bun run dev"
+devUrl = "http://localhost:1420"
+beforeBuildCommand = "bun run build"
+frontendDist = "../dist"
+
+[[app.windows]]
+title = "E-Zip"
+width = 800
+height = 600
+transparent = true
+
+[app.windows.windowEffects]
+effects = ["fullScreenUI", "tabbed", "mica"]
+
+[app.security]
+csp = ""
+
+[bundle]
+active = true
+targets = "all"
+icon = ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
+
+[plugins.FsScope]
+allow = ["**"]
