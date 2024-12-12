@@ -322,7 +322,7 @@ impl LineType {
         match prefix {
             "Path = " => LineType::Path(line.replace(prefix, "")),
             "Folder = " => LineType::Folder(line.replace(prefix, "") == "+"),
-            "Attributes = " => LineType::Attributes(line.replace(prefix, "") == "D"),
+            "Attributes = " => LineType::Attributes(line.replace(prefix, "").starts_with("D")),
             "Modified = " => {
                 let date = line.replace(prefix, "").replace(" ", "T");
                 // date.push('Z'); PrimitiveDateTime not need timezone, but OffsetDateTime need.
@@ -386,7 +386,7 @@ where
                             path = s;
                         }
                         Some(LineType::Folder(b) | LineType::Attributes(b)) => {
-                            is_dir = b;
+                            is_dir |= b;
                         }
                         Some(LineType::Modified(datetime)) => {
                             modified = Some(datetime);
@@ -413,6 +413,7 @@ where
                     Err(e) => Err(e),
                 },
             )?;
+            archive.sort();
             archive.set_password(password);
             archive.set_codepage(codepage);
             archive.has_root_dir(true);

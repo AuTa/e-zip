@@ -17,8 +17,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover
 import type { Codepage } from '../bindings'
 import { RefreshArchiveButton } from './RefreshArchiveButton'
 
-import '~/App.css'
-
 const CODEPAGE_OPTIONS = ['GB2312', 'BIG5', 'SHIFT_JIS', 'UTF_8']
 
 export const CodepageButton: Component<{
@@ -68,7 +66,7 @@ export const CodepageButton: Component<{
     return (
         <Popover>
             <PopoverTrigger onClick={onClick}>
-                <Badge class="">
+                <Badge variant={codepage() === null ? null : 'default'}>
                     <Show when={codepage() !== null} fallback="Codepage">
                         {codepage()}
                     </Show>

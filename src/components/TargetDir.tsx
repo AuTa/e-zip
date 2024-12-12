@@ -57,15 +57,15 @@ export const TargetDir: Component = () => {
     }
 
     return (
-        <form>
+        <form onSubmit={e => e.preventDefault()}>
             <TextField value={targetDir()} onChange={setTargetDir} readOnly={!canInput()}>
-                <Flex>
-                    <TextFieldLabel class="w-20">解压路径</TextFieldLabel>
-                    <Flex>
-                        <TextFieldInput type="text" ref={input} />
+                <Flex class="flex-wrap">
+                    <TextFieldLabel class="lg:basis-full my-2 font-semibold mr-2">解压路径</TextFieldLabel>
+                    <Flex class="flex-1">
+                        <TextFieldInput type="text" ref={input} class="pr-20" />
                         <Flex justifyContent="end" class="w-auto ml-[-100%] mr-1">
                             <Tooltip>
-                                <TooltipTrigger as={Button} type="reset" variant="ghost" size="sm" class="text-base px-2">
+                                <TooltipTrigger as={Button} type="reset" variant="ghost" size="sm" class="text-base px-2 w-9">
                                     <div class="i-material-symbols-light-clear-all-rounded" />
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -76,7 +76,7 @@ export const TargetDir: Component = () => {
                             <Toggle pressed={canInput()} onChange={switchReadonly} as="div" tabIndex={-1} class="px-0">
                                 {state => (
                                     <Tooltip>
-                                        <TooltipTrigger as={Button} type="button" variant="ghost" size="sm" class="text-base px-2">
+                                        <TooltipTrigger as={Button} type="button" variant="ghost" size="sm" class="text-base px-2 w-9">
                                             <Show
                                                 when={state.pressed()}
                                                 fallback={<div class="i-material-symbols-light-edit-off-outline-rounded" />}

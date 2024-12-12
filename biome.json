@@ -50,5 +50,15 @@
             "allowComments": true,
             "allowTrailingCommas": true
         }
-    }
+    },
+    "overrides": [
+        {
+            "include": ["package.json"],
+            "json": {
+                "formatter": {
+                    "trailingCommas": "none"
+                }
+            }
+        }
+    ]
 }

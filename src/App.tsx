@@ -1,40 +1,19 @@
 import { ColorModeProvider, ColorModeScript, createLocalStorageManager } from '@kobalte/core'
-import { invoke } from '@tauri-apps/api/core'
-import { createResource, createSignal, Match, Show, Switch } from 'solid-js'
+import { createResource, Match, type ParentComponent, Switch } from 'solid-js'
 
-import { Button } from '~/components/ui/button'
-import { commands } from './bindings'
+import { Flex } from '~/components/ui/flex'
+import { SidebarProvider, SidebarTrigger } from '~/components/ui/sidebar'
+import { AppSidebar } from './components/AppSidebar'
 import { ArchiveContents } from './components/ArchiveContents'
 import { AppConfigProvider, makeAppConfigContext } from './components/Config'
-import { makePasswordInputContext, Password, PasswordInputProvider } from './components/Password'
-import { makeTargetDirContext, TargetDir, TargetDirProvider } from './components/TargetDir'
+import { makePasswordInputContext, PasswordInputProvider } from './components/Password'
+import { makeTargetDirContext, TargetDirProvider } from './components/TargetDir'
 
 import './App.css'
+import { Grid } from './components/ui/grid'
 
-function App() {
+const App: ParentComponent = props => {
     const storageManager = createLocalStorageManager('vite-ui-theme')
-
-    const [sevenZipVersion, setSevenZipVersion] = createSignal('')
-    const [hasSevenZip, setHasSevnezip] = createSignal(true)
-
-    async function check7zVersion() {
-        const version = await commands.check7zVersion()
-        if (version.status === 'error') {
-            console.error(version.error)
-            setHasSevnezip(false)
-        } else {
-            setSevenZipVersion(version.data)
-        }
-    }
-
-    check7zVersion()
-
-    async function downloadSevenZip() {
-        console.log('downloadSevenZip')
-        const result = await commands.download7z()
-        console.log(result)
-        check7zVersion()
-    }
 
     const [appConfig] = createResource(async () => {
         return await makeAppConfigContext()
@@ -45,28 +24,32 @@ function App() {
             <ColorModeScript storageType={storageManager.type} />
             {/* context. */}
             <ColorModeProvider storageManager={storageManager}>
-                <main class="container chinese">
-                    <h1>Welcome to Tauri + Solid</h1>
-                    <Switch>
-                        <Match when={appConfig()}>
-                            {value => (
-                                <AppConfigProvider value={value()}>
-                                    <TargetDirProvider value={makeTargetDirContext(value()[0].target.dir)}>
-                                        <TargetDir />
-                                        <PasswordInputProvider value={makePasswordInputContext()}>
-                                            <Password />
-                                            <ArchiveContents />
-                                        </PasswordInputProvider>
-                                    </TargetDirProvider>
-                                </AppConfigProvider>
-                            )}
-                        </Match>
-                    </Switch>
-                    <p>{sevenZipVersion()}</p>
-                    <Show when={!hasSevenZip()}>
-                        7z not found.<Button onClick={downloadSevenZip}>Download</Button>
-                    </Show>
-                </main>
+                <SidebarProvider>
+                    <AppSidebar />
+                    <main class="w-full h-full scrollbar-none">
+                        <Grid class="grid-rows-[auto_minmax(0,1fr)] h-screen">
+                            <SidebarTrigger />
+
+                            <Switch>
+                                <Match when={appConfig()}>
+                                    {value => (
+                                        <AppConfigProvider value={value()}>
+                                            <TargetDirProvider value={makeTargetDirContext(value()[0].target.dir)}>
+                                                <PasswordInputProvider value={makePasswordInputContext()}>
+                                                    <Grid class="<lg:grid-rows-[auto_auto_minmax(0,1fr)] lg:grid-cols-[2fr_auto_3fr] lg:grid-rows-[minmax(0,1fr)]">
+                                                        {props.children}
+                                                        <hr class="border-t-0 h-px w-full bg-gradient-to-r lg:w-px lg:h-full lg:bg-gradient-to-b from-transparent via-border" />
+                                                        <ArchiveContents class="" />
+                                                    </Grid>
+                                                </PasswordInputProvider>
+                                            </TargetDirProvider>
+                                        </AppConfigProvider>
+                                    )}
+                                </Match>
+                            </Switch>
+                        </Grid>
+                    </main>
+                </SidebarProvider>
             </ColorModeProvider>
         </>
     )

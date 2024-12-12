@@ -43,12 +43,10 @@ export const DeleteUnzipedArchiveButton: Component<{
 
     createEffect(() => {
         if (isAuto()) {
-            console.log(props.paths)
             createEffect(async () => {
                 if (props.recentlyUnzipedPath) {
                     await deleteArchives([props.recentlyUnzipedPath])
                 }
-                console.log('after', props.paths)
             })
         }
     })

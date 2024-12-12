@@ -4,7 +4,7 @@ use std::{
     path::PathBuf,
 };
 
-use ego_tree::Tree;
+use ego_tree::{NodeId, Tree};
 use regex::Regex;
 use serde::Serialize;
 use specta::{datatype::DataType, NamedType, Type};
@@ -135,6 +135,28 @@ impl FsTree {
             node_id = node.append(new_node).id();
         }
     }
+
+    fn sort(&mut self) {
+        let children = self.root().children().map(|n| n.id()).collect::<Vec<_>>();
+
+        sort_recursion(children, self);
+    }
+}
+
+fn sort_recursion(children: Vec<NodeId>, tree: &mut Tree<FsNode>) {
+    for child in children {
+        {
+            let mut child_mut = tree.get_mut(child).unwrap();
+            child_mut.sort_by_key(|a| a.value().name());
+        }
+        let child_children = tree
+            .get(child)
+            .unwrap()
+            .children()
+            .map(|n| n.id())
+            .collect::<Vec<_>>();
+        sort_recursion(child_children, tree);
+    }
 }
 
 impl ArchiveTree {
@@ -180,6 +202,10 @@ impl ArchiveTree {
 
     pub fn set_codepage(&mut self, codepage: OptionalCodepage) {
         self.codepage = codepage;
+    }
+
+    pub fn sort(&mut self) {
+        self.tree.sort();
     }
 }
 

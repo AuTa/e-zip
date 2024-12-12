@@ -59,12 +59,12 @@ export const Password: Component = () => {
     }
 
     return (
-        <form>
+        <form onSubmit={e => e.preventDefault()}>
             <Combobox
                 name="passwords"
                 options={passwords}
                 onInputChange={onInputChange}
-                placeholder="Select or enter a password..."
+                placeholder="Password..."
                 itemComponent={props => (
                     <ComboboxItem item={props.item}>
                         <ComboboxItemLabel>{props.item.rawValue}</ComboboxItemLabel>
@@ -72,11 +72,17 @@ export const Password: Component = () => {
                     </ComboboxItem>
                 )}
             >
-                <Flex>
-                    <ComboboxLabel class={cn(labelVariants(), 'w-20')}>密码列表</ComboboxLabel>
-                    <Flex>
-                        <ComboboxControl aria-label="Password" class="w-full">
-                            <ComboboxInput value={password()} />
+                <Flex class="flex-wrap">
+                    <ComboboxLabel class={cn(labelVariants(), 'lg:basis-full', 'my-2', 'font-semibold', 'mr-2', 'flex-shrink-0')}>
+                        密码列表
+                    </ComboboxLabel>
+                    <Flex class="flex-1">
+                        {/* Control 没有设置高度，Input 设置了高度，但是 border 在 Control 上导致变高了一点。 */}
+                        <ComboboxControl
+                            aria-label="Password"
+                            class="w-full ring-offset-background focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 h-10"
+                        >
+                            <ComboboxInput value={password()} class="pr-13 py-2" />
                             <ComboboxTrigger />
                         </ComboboxControl>
                         <ComboboxContent />
@@ -86,7 +92,7 @@ export const Password: Component = () => {
                                 onClick={removePassword}
                                 variant="ghost"
                                 size="sm"
-                                class="text-base px-2 ml-[-100%] mr-10"
+                                class="text-base px-2 ml-[-100%] mr-10 w-9"
                             >
                                 <div class="i-material-symbols-light-delete-outline-rounded" />
                             </TooltipTrigger>

@@ -1,10 +1,11 @@
 import { TauriEvent, listen } from '@tauri-apps/api/event'
-import { Index, Show, createSignal, type Component } from 'solid-js'
+import { type ComponentProps, Index, Show, ValidComponent, createSignal, type Component } from 'solid-js'
 import { createStore, produce } from 'solid-js/store'
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '~/components/ui/accordion'
 import { Badge } from '~/components/ui/badge'
 import { Flex } from '~/components/ui/flex'
+import { Label } from '~/components/ui/label'
 import { Separator } from '~/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
 import { commands, type Archive, type ArchiveTree, type Codepage, type FsNode, type UnzipedArchiveEvent } from '../bindings'
@@ -17,6 +18,9 @@ import { RemoveAllArchiveButton } from './RemoveAllArchiveButton'
 import { RemoveArchiveButton } from './RemoveArchiveButton'
 import { useTargetDir } from './TargetDir'
 import { UnzipButton } from './UnzipButton'
+import { cn } from '~/lib/utils'
+import { Grid } from './ui/grid'
+import { UnzipControl } from './UnzipControl'
 
 // biome-ignore lint/style/useNamingConvention: <explanation>
 type Result<T, E> = { Ok?: T; Error?: E }
@@ -69,7 +73,7 @@ function createFileCount(): FileCounter {
     }
 }
 
-export const ArchiveContents: Component = () => {
+export const ArchiveContents: Component<ComponentProps<'div'>> = props => {
     const [files, setFiles] = createStore({ files: [] as FileStore[] })
     const [unzipedPaths, setUnzipedPaths] = createStore([] as string[])
     const [recentlyUnzipedPath, setRecentlyUnzipedPath] = createSignal('')
@@ -223,21 +227,26 @@ export const ArchiveContents: Component = () => {
     }
 
     return (
-        <div>
-            <UnzipButton archives={files.files.map(f => f as Archive)} targetDir={targetDir()} onUnzipedArchive={handleUnzipedFile} />
-            <RemoveAllArchiveButton paths={files.files.map(f => f.path)} onRemove={removeArchive} />
-            <DeleteUnzipedArchiveButton paths={unzipedPaths} recentlyUnzipedPath={recentlyUnzipedPath()} onRemove={removeArchive} />
-            <Accordion collapsible defaultValue={['item-0']}>
+        <Grid class={cn(props.class, 'm-2', 'grid-rows-[auto_auto_minmax(0,1fr)]')}>
+            <Label class="basis-full my-2 font-semibold leading-none">压缩内容</Label>
+            <UnzipControl
+                files={files}
+                unzipedPaths={unzipedPaths}
+                recentlyUnzipedPath={recentlyUnzipedPath()}
+                onUnzipedArchive={handleUnzipedFile}
+                onRemove={removeArchive}
+            />
+            <Accordion collapsible defaultValue={['item-0']} class="mt-4 overflow-auto scrollbar-none">
                 <Index each={files.files}>
                     {(item, index) => (
-                        <AccordionItem value={`item-${index}`} class="py-2 ">
+                        <AccordionItem value={`item-${index}`} class="">
                             <AccordionTrigger class="w-full hover:decoration-none">
-                                <Flex justifyContent="start" class="flex-wrap min-w-80% gap-2 text-xs">
+                                <Flex justifyContent="start" class="flex-wrap min-w-50% gap-2 text-xs">
                                     <Tooltip>
                                         {/* placement start&end error. */}
                                         <TooltipTrigger
                                             as="span"
-                                            class="flex-basis-100% text-align-left text-base truncate hover:(inline-flex)"
+                                            class="basis-full text-align-left text-sm font-semibold truncate hover:(inline-flex)"
                                             classList={{ 'color-violet-400': isUnzipComplated(index) }}
                                         >
                                             {item()
@@ -249,14 +258,15 @@ export const ArchiveContents: Component = () => {
                                     <Separator />
                                     <span class="text-muted-foreground">{`📁 ${item().count.dir[1]}/${item().count.dir[0]}`}</span>
                                     <span class="text-muted-foreground">{`📄 ${item().count.file[1]}/${item().count.file[0]}`}</span>
-                                    <Show when={item().password}>
-                                        <Badge class="">{item().password}</Badge>
-                                    </Show>
+
                                     <CodepageButton
                                         codepage={item().codepage}
                                         setCodepage={(codepage: Codepage | null) => handleSetCodepage(item().path, codepage)}
                                         onRefresh={() => refreshArchive(item().path)}
                                     />
+                                    <Show when={item().password}>
+                                        <Badge class="">{item().password}</Badge>
+                                    </Show>
                                     <Show when={item().unzippingFile}>
                                         <span class="text-muted-foreground">Unzipping: {item().unzippingFile}</span>
                                     </Show>
@@ -275,7 +285,7 @@ export const ArchiveContents: Component = () => {
                     )}
                 </Index>
             </Accordion>
-        </div>
+        </Grid>
     )
 }
 

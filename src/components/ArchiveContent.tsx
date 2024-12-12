@@ -19,28 +19,32 @@ export const ArchiveContent: Component<{
         return (value() as ExcludeFsNode).name
     }
 
-    const emojiName = createMemo(() => {
+    const emoji = createMemo(() => {
         switch (value().type) {
             case 'None':
-                return `📁 ${name()}`
+                return "before:content-['📁']"
             case 'Dir':
-                return `📁 ${name()}`
+                return "before:content-['📁']"
             case 'File':
-                return `📄 ${name()}`
+                return "before:content-['📄']"
         }
     })
 
     const emojiNameElement = () => {
-        return <span class={contents().unziped ? 'color-violet-400' : ''}>{emojiName()}</span>
+        return (
+            <span class={`break-all before:(position-absolute left-0) ${emoji()}`} classList={{ 'color-violet-400': contents().unziped }}>
+                {name()}
+            </span>
+        )
     }
 
     return (
-        <Show when={contents().children.length > 0} fallback={<div class="pl-5 border-l">{emojiNameElement()}</div>}>
-            <AccordionItem value={`item-${name()}`} class="pl-5 border-b-none border-l">
-                <AccordionTrigger class="py-2 hover:decoration-none">
-                    <div>{emojiNameElement()}</div>
+        <Show when={contents().children.length > 0} fallback={<div class="mr-4 pl-5 border-l position-relative">{emojiNameElement()}</div>}>
+            <AccordionItem value={`item-${name()}`} class="pl-0 border-b-none border-l">
+                <AccordionTrigger class="py-2 hover:decoration-none text-align-start">
+                    <div class="pl-5 position-relative">{emojiNameElement()}</div>
                 </AccordionTrigger>
-                <AccordionContent>
+                <AccordionContent class="ml-4 [&>div:first-child]:pb-0">
                     <Accordion multiple>
                         <Index each={contents().children}>{item => <ArchiveContent contents={item()} />}</Index>
                     </Accordion>
