@@ -1,8 +1,9 @@
+import { A } from '@solidjs/router'
+
 import {
     Sidebar,
     SidebarContent,
     SidebarFooter,
-    SidebarGroup,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
@@ -11,7 +12,6 @@ import {
 import { SevenZipVersion } from './SevenZipVersion'
 
 import './AppSidebar.css'
-import { A } from '@solidjs/router'
 
 export function AppSidebar() {
     return (
