@@ -64,7 +64,8 @@ pub fn unzip(
         None => global_password.to_owned(),
         _ => archive.password.clone(),
     };
-    if !sevenz_extract(&archive, target_dir, password, sender) { // TODO: password error
+    if !sevenz_extract(&archive, target_dir, password, sender) {
+        // TODO: password error
         for password in app_config.passwords() {
             if !sevenz_extract(&archive, target_dir, password.into(), sender) {
                 continue;
@@ -81,6 +82,9 @@ struct ArchiveCount {
     file: u32,
 }
 
+const  FOLDERS_LINE: &str = "Folders: ";
+const  FILES_LINE: &str = "Files: ";
+
 fn sevenz_test(archive: &Archive, password: Option<String>) -> Option<ArchiveCount> {
     let mut command = sevenz_command().unwrap();
     command.args(TEST_COMMAND_ARGS);
@@ -93,10 +97,10 @@ fn sevenz_test(archive: &Archive, password: Option<String>) -> Option<ArchiveCou
         let mut archive_count = ArchiveCount { folder: 0, file: 0 };
         let output = String::from_utf8_lossy(&output.stdout);
         output.lines().for_each(|line| {
-            if line.starts_with("Folders:") {
-                archive_count.folder = line.replace("Folders: ", "").parse().unwrap();
-            } else if line.starts_with("Files:") {
-                archive_count.file = line.replace("Files: ", "").parse().unwrap();
+            if line.starts_with(FOLDERS_LINE) {
+                archive_count.folder = line.replace(FOLDERS_LINE, "").parse().unwrap();
+            } else if line.starts_with(FILES_LINE) {
+                archive_count.file = line.replace(FILES_LINE, "").parse().unwrap();
             }
         });
         return Some(archive_count);

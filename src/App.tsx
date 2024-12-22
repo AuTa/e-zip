@@ -4,7 +4,7 @@ import { createResource, Match, type ParentComponent, Switch } from 'solid-js'
 import { Flex } from '~/components/ui/flex'
 import { SidebarProvider, SidebarTrigger } from '~/components/ui/sidebar'
 import { AppSidebar } from './components/AppSidebar'
-import { ArchiveContents } from './components/ArchiveContents'
+import { ArchiveContentsComponent } from './components/ArchiveContents'
 import { AppConfigProvider, makeAppConfigContext } from './components/Config'
 import { makePasswordInputContext, PasswordInputProvider } from './components/Password'
 import { makeTargetDirContext, TargetDirProvider } from './components/TargetDir'
@@ -39,7 +39,7 @@ const App: ParentComponent = props => {
                                                     <Grid class="<lg:grid-rows-[auto_auto_minmax(0,1fr)] lg:grid-cols-[2fr_auto_3fr] lg:grid-rows-[minmax(0,1fr)]">
                                                         {props.children}
                                                         <hr class="border-t-0 h-px w-full bg-gradient-to-r lg:w-px lg:h-full lg:bg-gradient-to-b from-transparent via-border" />
-                                                        <ArchiveContents class="" />
+                                                        <ArchiveContentsComponent class="" />
                                                     </Grid>
                                                 </PasswordInputProvider>
                                             </TargetDirProvider>

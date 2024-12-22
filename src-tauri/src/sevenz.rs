@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    convert::identity,
     fs, io,
     num::NonZeroUsize,
     path::{Path, PathBuf},
@@ -15,14 +16,14 @@ use lru::LruCache;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use strum::IntoEnumIterator;
+use strum::{IntoEnumIterator, VariantNames};
 use tauri_plugin_http::reqwest;
 use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};
 use time_tz::{system::get_timezone, PrimitiveDateTimeExt};
 
 use crate::config;
 use error::SevenzError;
-use fs_tree::ArchiveTree;
+use fs_tree::{ArchiveContents, ArchiveMultiVolume};
 
 pub mod codepage;
 pub mod delete;
@@ -224,10 +225,17 @@ pub fn show_archive_content<P>(
     password: &str,
     codepage: OptionalCodepage,
     app_config: &config::AppConfig,
-) -> Result<fs_tree::ArchiveTree, SevenzError>
+) -> Result<fs_tree::ArchiveContents, SevenzError>
 where
     P: AsRef<Path>,
 {
+    // 判断文件是否是文件夹.
+    if !file_path.as_ref().is_file() {
+        return Err(SevenzError::UnsupportedFile(
+            file_path.as_ref().to_path_buf(),
+        ));
+    }
+
     let mut current_password = password.to_owned();
     let mut result = sevenz_list_command(&file_path, &current_password, codepage.clone());
     if result.is_ok() {
@@ -273,14 +281,27 @@ impl OutputFile {
     }
 }
 
-static PREFIX: [&str; 4] = ["Path = ", "Folder = ", "Attributes = ", "Modified = "];
+#[derive(strum::Display, strum::EnumIter)]
+enum Prefix {
+    Path,
+    Folder,
+    Attributes,
+    Modified,
+    Multivolume,
+    #[strum(serialize = "Volume Index")]
+    VolumeIndex,
+    Volumes,
+}
 
+#[derive(strum::Display, strum::VariantNames)]
 enum LineType {
     Path(String),
     Folder(bool),
     Attributes(bool),
     Modified(OffsetDateTime),
-    None,
+    Multivolume(bool),
+    VolumeIndex(usize),
+    Volumes(usize),
 }
 
 impl LineType {
@@ -299,39 +320,30 @@ impl LineType {
     /// * `Option<LineType>` - Returns `Some(LineType)` if a prefix match is found,
     ///   otherwise returns `None`.
     fn new(line: &str) -> Option<LineType> {
-        PREFIX.iter().find_map(|prefix| {
-            if line.starts_with(prefix) {
-                Some(LineType::_new(prefix, line))
-            } else {
-                None
+        Prefix::iter().find_map(|prefix| {
+            let prefix_s = prefix.to_string();
+            if !line.starts_with(&prefix_s) {
+                return None;
             }
-        })
-    }
 
-    /// Creates a new `LineType` based on the provided prefix and line.
-    ///
-    /// # Arguments
-    ///
-    /// * `prefix` - A string slice representing the prefix of the line.
-    /// * `line` - A string slice of the full line to be parsed.
-    ///
-    /// # Returns
-    ///
-    /// * `LineType` - Returns the corresponding `LineType` variant based on the prefix.
-    fn _new(prefix: &str, line: &str) -> LineType {
-        match prefix {
-            "Path = " => LineType::Path(line.replace(prefix, "")),
-            "Folder = " => LineType::Folder(line.replace(prefix, "") == "+"),
-            "Attributes = " => LineType::Attributes(line.replace(prefix, "").starts_with("D")),
-            "Modified = " => {
-                let date = line.replace(prefix, "").replace(" ", "T");
-                // date.push('Z'); PrimitiveDateTime not need timezone, but OffsetDateTime need.
-                let datetime = PrimitiveDateTime::parse(&date, &Iso8601::DEFAULT).unwrap();
-                let offset_datetime = datetime.assume_timezone_utc(get_timezone().unwrap());
-                LineType::Modified(offset_datetime)
-            }
-            _ => LineType::None,
-        }
+            let prefix_full = format!("{} = ", prefix_s);
+            let value = line.replace(&prefix_full, "");
+            Some(match prefix {
+                Prefix::Path => LineType::Path(value),
+                Prefix::Folder => LineType::Folder(value == "+"),
+                Prefix::Attributes => LineType::Attributes(value.starts_with("D")),
+                Prefix::Modified => {
+                    let date = value.replace(" ", "T");
+                    // date.push('Z'); PrimitiveDateTime not need timezone, but OffsetDateTime need.
+                    let datetime = PrimitiveDateTime::parse(&date, &Iso8601::DEFAULT).unwrap();
+                    let offset_datetime = datetime.assume_timezone_utc(get_timezone().unwrap());
+                    LineType::Modified(offset_datetime)
+                }
+                Prefix::Multivolume => LineType::Multivolume(value == "+"),
+                Prefix::VolumeIndex => LineType::VolumeIndex(value.parse().unwrap()),
+                Prefix::Volumes => LineType::Volumes(value.parse().unwrap()),
+            })
+        })
     }
 }
 
@@ -339,16 +351,19 @@ fn sevenz_list_command<P>(
     archive_path: P,
     password: &str,
     codepage: OptionalCodepage,
-) -> Result<fs_tree::ArchiveTree, SevenzError>
+) -> Result<fs_tree::ArchiveContents, SevenzError>
 where
     P: AsRef<Path>,
 {
     let output = sevenz_list_command_output(&archive_path, password, codepage.clone());
     match output {
         Ok(s) => {
-            let groups = s
-                .lines()
-                .skip_while(|line| *line != "----------")
+            let mut lines = s.lines();
+            let mut base = lines.by_ref().take_while(|line| *line != "----------");
+            let base = archive_multi_volume(&archive_path, &mut base);
+
+            let groups = lines
+                // .skip_while(|line| *line != "----------")
                 .skip(1) // 跳过 "----------".
                 .fold(vec![vec![]], |mut groups, line| {
                     if line.is_empty() {
@@ -374,12 +389,6 @@ where
                                 })
                                 .count();
                             let chars_count = s.chars().count();
-                            // println!(
-                            //     "{} {} {:X?}",
-                            //     check,
-                            //     chars_count,
-                            //     s.chars().map(|c| (c as u32, c)).collect::<Vec<(u32, char)>>()
-                            // );
                             if check as f64 / chars_count as f64 > 0.5 {
                                 return Err(SevenzError::InvalidUtf8(s.to_owned()));
                             };
@@ -391,7 +400,12 @@ where
                         Some(LineType::Modified(datetime)) => {
                             modified = Some(datetime);
                         }
-                        Some(LineType::None) | None => {}
+                        Some(
+                            LineType::Multivolume(_)
+                            | LineType::VolumeIndex(_)
+                            | LineType::Volumes(_),
+                        )
+                        | None => {}
                     };
                 }
                 Ok(OutputFile {
@@ -403,7 +417,7 @@ where
 
             let mut archive = output_files.rev().try_fold(
                 // NOTE: try_fold
-                ArchiveTree::new(archive_path.as_ref().to_path_buf()),
+                ArchiveContents::new(archive_path.as_ref().to_path_buf()),
                 |mut tree, file| match file {
                     Ok(file) => {
                         file.cache_modified(archive_path.as_ref().to_path_buf());
@@ -417,7 +431,7 @@ where
             archive.set_password(password);
             archive.set_codepage(codepage);
             archive.has_root_dir(true);
-            // println!("{}", archive);
+
             Ok(archive)
         }
         Err(e) => Err(e),
@@ -443,19 +457,21 @@ where
     }
     command.arg(archive_path.as_ref());
     let output = command.output();
-
     match output {
         Ok(output) => {
+            println!("output: {:?}", output.status);
             if output.status.success() {
-                return Ok(String::from_utf8_lossy(&output.stdout).to_string());
+                Ok(String::from_utf8_lossy(&output.stdout).to_string())
             } else if need_password(&output) || wrong_password(&output) {
-                return Err(SevenzError::NeedPassword(
+                Err(SevenzError::NeedPassword(
                     archive_path.as_ref().as_os_str().into(),
-                ));
+                ))
+            } else if handers_error(&output) {
+                Ok(String::from_utf8_lossy(&output.stdout).to_string())
             } else {
-                return Err(SevenzError::CommandError(
+                Err(SevenzError::CommandError(
                     String::from_utf8_lossy(&output.stdout).to_string(),
-                ));
+                ))
             }
         }
         Err(err) => Err(SevenzError::CommandError(err.to_string())),
@@ -482,4 +498,68 @@ fn need_password(output: &Output) -> bool {
 fn wrong_password(output: &Output) -> bool {
     let output_str = String::from_utf8_lossy(&output.stderr);
     output.status.code() == Some(2) && output_str.contains("Wrong password?")
+}
+
+fn handers_error(output: &Output) -> bool {
+    let output_str = String::from_utf8_lossy(&output.stdout);
+    output.status.code() == Some(2) && output_str.contains("Headers Error")
+}
+
+fn archive_multi_volume<'a, P>(
+    archive_path: P,
+    lines: &mut impl Iterator<Item = &'a str>,
+) -> ArchiveMultiVolume
+where
+    P: AsRef<Path>,
+{
+    let mut is_multi_volume = false;
+    let mut volume_index = 0;
+    let mut volumes_left = 0; // include current volume.
+    for line in lines {
+        let line_type = LineType::new(line);
+        match line_type {
+            Some(LineType::Multivolume(b)) => {
+                is_multi_volume = b;
+            }
+            Some(LineType::VolumeIndex(i)) => {
+                volume_index = i;
+            }
+            Some(LineType::Volumes(i)) => {
+                volumes_left = i;
+            }
+            Some(
+                LineType::Path(_)
+                | LineType::Folder(_)
+                | LineType::Attributes(_)
+                | LineType::Modified(_),
+            )
+            | None => {}
+        };
+    }
+
+    let mut multi = ArchiveMultiVolume::default();
+    if is_multi_volume {
+        let regex = Regex::new(
+            r"(?<name>.*)\.part(?<rar>\d+)\.rar|\.r(?<r>\d+)|\.(?<ext>7z|zip)\.(?<z>\d+)",
+        )
+        .unwrap();
+        let file_name = archive_path
+            .as_ref()
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+        let captures = regex.captures(&file_name);
+        println!("captures: {:?} file: {}", captures, file_name);
+        if let Some(captures) = captures {
+            if let Some(part) = captures.iter().skip(1).find_map(identity) {
+                let current_rank: usize = part.as_str().parse().unwrap();
+                for i in 0..(volume_index + volumes_left) {
+                    let rank = i + current_rank - volume_index;
+                    println!("rank: {}", rank);
+                }
+            }
+        }
+    }
+    multi
 }

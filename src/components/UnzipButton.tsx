@@ -14,9 +14,7 @@ export const UnzipButton: Component<{
 
     async function handleClick() {
         const unlisten = await events.unzipedArchiveEvent.listen(e => props.onUnzipedArchive(e.payload))
-        await commands.unzipArchives(props.archives, targetDir(), password()).then(() => {
-            unlisten()
-        })
+        await commands.unzipArchives(props.archives, targetDir(), password()).finally(() => unlisten())
     }
 
     return (

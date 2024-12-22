@@ -45,4 +45,4 @@ unicode-normalization = "0.1.24"
 time-tz = { version = "3.0.0-rc.5.0.0", features = ["system"] }
 tokio = "1.41.1"
 serde_with = "3.11.0"
-strum = { version = "0.26.3", features = ["derive"] }
+strum = { version = "0.26", features = ["derive"] }

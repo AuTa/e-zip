@@ -6,7 +6,8 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 use sevenz::{
-    fs_tree::{ArchiveTree, FsTreeNode},
+    error::SevenzError,
+    fs_tree::{ArchiveContents, FsTreeNode},
     Archive,
 };
 use specta::Type;
@@ -34,6 +35,25 @@ async fn download_7z(app: AppHandle) -> Result<(), String> {
     }
 }
 
+#[derive(Serialize, Debug, Clone, Type)]
+#[serde(tag = "status", rename_all = "camelCase")]
+enum SpectaResult<T, E> {
+    Ok { data: T },
+    Error { error: E },
+}
+
+impl<T, E> From<Result<T, E>> for SpectaResult<T, E> {
+    fn from(result: Result<T, E>) -> Self {
+        match result {
+            Ok(data) => Self::Ok { data },
+            Err(error) => Self::Error { error },
+        }
+    }
+}
+
+#[derive(Serialize, Debug, Clone, Type, Event)]
+pub struct ShowArchiveContentsEvent<'a>(SpectaResult<&'a ArchiveContents, &'a SevenzError>);
+
 #[tauri::command]
 #[specta::specta]
 async fn show_archives_contents(
@@ -45,7 +65,9 @@ async fn show_archives_contents(
     let app_config = app_config.lock().unwrap().clone();
     for path in paths {
         let result = sevenz::show_archive_content(&path, &password, None, &app_config);
-        app.emit("drag_drop_file_contents", &result).unwrap();
+        ShowArchiveContentsEvent(result.as_ref().into())
+            .emit(&app)
+            .unwrap();
     }
     Ok(())
 }
@@ -63,7 +85,9 @@ async fn refresh_archive_contents(
 
     let result =
         sevenz::show_archive_content(&archive.path, &password, archive.codepage, &app_config);
-    app.emit("drag_drop_file_contents", &result).unwrap();
+    ShowArchiveContentsEvent(result.as_ref().into())
+        .emit(&app)
+        .unwrap();
     Ok(())
 }
 
@@ -136,9 +160,12 @@ pub fn run() {
             config::tauri::init_config,
             config::tauri::update_config,
         ])
-        .events(collect_events![UnzipedArchiveEvent])
+        .events(collect_events![
+            UnzipedArchiveEvent,
+            ShowArchiveContentsEvent
+        ])
         .typ::<FsTreeNode>()
-        .typ::<ArchiveTree>();
+        .typ::<ArchiveContents>();
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds
     builder

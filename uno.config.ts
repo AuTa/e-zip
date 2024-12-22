@@ -29,7 +29,7 @@ export default defineConfig<PresetUnoTheme>({
             breakpoints: {
                 ...theme.breakpoints,
                 sm: '480px',
-                // md: '480px',
+                md: '600px',
                 lg: '960px',
             },
         }

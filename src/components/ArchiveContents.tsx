@@ -1,45 +1,48 @@
-import { TauriEvent, listen } from '@tauri-apps/api/event'
-import { type ComponentProps, Index, Show, createSignal, type Component } from 'solid-js'
+import { TauriEvent, listen, type Event } from '@tauri-apps/api/event'
+import { Index, Show, createSignal, type Component, type ComponentProps } from 'solid-js'
 import { createStore, produce } from 'solid-js/store'
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '~/components/ui/accordion'
 import { Badge } from '~/components/ui/badge'
 import { Flex } from '~/components/ui/flex'
+import { Grid } from '~/components/ui/grid'
 import { Label } from '~/components/ui/label'
 import { Separator } from '~/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
-import { commands, type Archive, type ArchiveTree, type Codepage, type FsNode, type UnzipedArchiveEvent } from '../bindings'
+import { cn } from '~/lib/utils'
+import {
+    commands,
+    events,
+    type Archive,
+    type ArchiveContents,
+    type Codepage,
+    type FsNode,
+    type ShowArchiveContentsEvent,
+    type UnzipedArchiveEvent,
+} from '../bindings'
 import { ArchiveContent } from './ArchiveContent'
 import { CodepageButton } from './CodepageButton'
 import { usePasswordInput } from './Password'
 import { RefreshArchiveButton } from './RefreshArchiveButton'
 import { RemoveArchiveButton } from './RemoveArchiveButton'
-import { useTargetDir } from './TargetDir'
-import { cn } from '~/lib/utils'
-import { Grid } from './ui/grid'
 import { UnzipControl } from './UnzipControl'
 
-// biome-ignore lint/style/useNamingConvention: <explanation>
-type Result<T, E> = { Ok?: T; Error?: E }
-
-export type FileContents = {
+export type FileTree = {
     value: FsNode
-    children: FileContents[]
+    children: FileTree[]
     unziped: boolean
 }
 
-type DragDropFileContentsResult = Result<DragDropFileContents, string>
-
-type DragDropFileContents = ArchiveTree & {
-    tree: FileContents
+type ArchiveTree = ArchiveContents & {
+    tree: FileTree
 }
 type ArchiveExtend = {
-    contents: FileContents
+    contents: FileTree
     count: FileCounter
     unzippingFile: string
 }
 
-export type FileStore = ArchiveTree & ArchiveExtend
+export type FileStore = ArchiveContents & ArchiveExtend
 
 function newArchiveExtend(): ArchiveExtend {
     return {
@@ -70,7 +73,7 @@ function createFileCount(): FileCounter {
     }
 }
 
-export const ArchiveContents: Component<ComponentProps<'div'>> = props => {
+export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props => {
     const [files, setFiles] = createStore({ files: [] as FileStore[] })
     const [unzipedPaths, setUnzipedPaths] = createStore([] as string[])
     const [recentlyUnzipedPath, setRecentlyUnzipedPath] = createSignal('')
@@ -81,33 +84,42 @@ export const ArchiveContents: Component<ComponentProps<'div'>> = props => {
         const { paths } = payload
         const path2Files = paths.filter(p => !files.files.some(f => f.path === p)).map(p => newFileStore(p))
         setFiles('files', [...files.files, ...path2Files])
-        await commands.showArchivesContents(paths, password())
+        const unlisten = await events.showArchiveContentsEvent.listen(event => onDragDrop(event))
+        await commands.showArchivesContents(paths, password()).finally(() => unlisten())
     })
 
-    listen('drag_drop_file_contents', event => {
-        const result = event.payload as DragDropFileContentsResult
-        const contents = result.Ok
-        if (contents !== undefined) {
-            setFiles(
-                'files',
-                f => f.path === contents.path,
-                produce(file => {
-                    file.password = contents.password
-                    file.contents = contents.tree
-                    file.codepage = contents.codepage
-                    file.count = handleFileCount(contents.tree)
-                }),
-            )
+    const onDragDrop = (event: Event<ShowArchiveContentsEvent>) => {
+        const result = event.payload
+        console.log(result)
+        if (result.status === 'error') {
+            const error = result.error
+            if (typeof error === 'string') {
+            } else if ('UnsupportedFile' in error) {
+                console.error('UnsupportedFile', error.UnsupportedFile)
+                setFiles('files', files.files.filter(f => f.path !== error.UnsupportedFile))
+            }
+            return
         }
-    })
+        const contents = result.data as ArchiveTree
+        setFiles(
+            'files',
+            f => f.path === contents.path,
+            produce(file => {
+                file.password = contents.password
+                file.contents = contents.tree
+                file.codepage = contents.codepage
+                file.count = handleFileCount(contents.tree)
+            }),
+        )
+    }
 
-    const handleFileCount = (contents: FileContents): FileCounter => {
+    const handleFileCount = (contents: FileTree): FileCounter => {
         const count = createFileCount()
         // 如果没有根文件夹, 解压的时候会添加.
         if (contents.children.length > 1) {
             count.dir[0] += 1
         }
-        const handleSetCount = (contents: FileContents) => {
+        const handleSetCount = (contents: FileTree) => {
             switch (contents.value.type) {
                 case 'Dir':
                     count.dir[0] += 1
@@ -185,8 +197,6 @@ export const ArchiveContents: Component<ComponentProps<'div'>> = props => {
         }
     }
 
-    const [targetDir] = useTargetDir()
-
     const isUnzipComplated = (index: number) => {
         const count = files.files[index].count
         return (count.dir[1] > 0 || count.file[1] > 0) && count.dir[0] === count.dir[1] && count.file[0] === count.file[1]
@@ -216,7 +226,8 @@ export const ArchiveContents: Component<ComponentProps<'div'>> = props => {
                 // file.unzippingFile = ''
             }),
         )
-        await commands.refreshArchiveContents(file as Archive, password())
+        const unlisten = await events.showArchiveContentsEvent.listen(event => onDragDrop(event))
+        await commands.refreshArchiveContents(file as Archive, password()).finally(() => unlisten())
     }
 
     const handleSetCodepage = (path: string, codepage: Codepage | null) => {
@@ -286,4 +297,4 @@ export const ArchiveContents: Component<ComponentProps<'div'>> = props => {
     )
 }
 
-export default ArchiveContents
+export default ArchiveTree

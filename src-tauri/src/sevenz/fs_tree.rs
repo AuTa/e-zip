@@ -91,15 +91,6 @@ impl fmt::Display for FsTreeNode {
 #[derive(Debug, Serialize)]
 pub struct FsTree(Tree<FsNode>);
 
-#[derive(Debug, Serialize, Type)]
-pub struct ArchiveTree {
-    path: PathBuf,
-    #[specta(skip)]
-    tree: FsTree,
-    password: Option<String>,
-    codepage: OptionalCodepage,
-}
-
 impl FsTree {
     fn append_file(&mut self, file: OutputFile) {
         let tree = &mut *self;
@@ -159,13 +150,41 @@ fn sort_recursion(children: Vec<NodeId>, tree: &mut Tree<FsNode>) {
     }
 }
 
-impl ArchiveTree {
+#[derive(Default, Debug, Clone, Serialize, Type)]
+pub struct ArchiveMultiVolume {
+    is_multi_volume: bool,
+    archives: Vec<PathBuf>,
+}
+
+impl ArchiveMultiVolume {
+    pub fn set_multi_volume(&mut self, is_multi_volume: bool) {
+        self.is_multi_volume = is_multi_volume;
+    }
+
+    pub fn append_archive(&mut self, archive: PathBuf) {
+        self.is_multi_volume = true;
+        self.archives.push(archive);
+    }
+}
+
+#[derive(Debug, Serialize, Type)]
+pub struct ArchiveContents {
+    path: PathBuf,
+    #[specta(skip)]
+    tree: FsTree,
+    password: Option<String>,
+    codepage: OptionalCodepage,
+    multi_volume: ArchiveMultiVolume,
+}
+
+impl ArchiveContents {
     pub fn new(path: PathBuf) -> Self {
-        ArchiveTree {
+        ArchiveContents {
             path,
             tree: FsTree(Tree::new(FsNode::None)),
             password: None,
             codepage: None,
+            multi_volume: ArchiveMultiVolume::default(),
         }
     }
 
@@ -206,6 +225,10 @@ impl ArchiveTree {
 
     pub fn sort(&mut self) {
         self.tree.sort();
+    }
+
+    pub fn set_multi_volume(&mut self, multi_volume: ArchiveMultiVolume) {
+        self.multi_volume = multi_volume;
     }
 }
 
@@ -256,7 +279,7 @@ impl fmt::Display for FsTree {
     }
 }
 
-impl fmt::Display for ArchiveTree {
+impl fmt::Display for ArchiveContents {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}\n{}", self.path.display(), self.tree)
     }

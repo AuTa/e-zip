@@ -70,8 +70,10 @@ async updateConfig(appConfig: AppConfig) : Promise<Result<null, string>> {
 
 
 export const events = __makeEvents__<{
+showArchiveContentsEvent: ShowArchiveContentsEvent,
 unzipedArchiveEvent: UnzipedArchiveEvent
 }>({
+showArchiveContentsEvent: "show-archive-contents-event",
 unzipedArchiveEvent: "unziped-archive-event"
 })
 
@@ -83,14 +85,17 @@ unzipedArchiveEvent: "unziped-archive-event"
 
 export type AppConfig = { target: Target; autoDelete: boolean; passwords: string[] }
 export type Archive = { path: string; password: string | null; codepage: Codepage | null }
-export type ArchiveTree = { path: string; password: string | null; codepage: Codepage | null }
+export type ArchiveContents = { path: string; password: string | null; codepage: Codepage | null; multi_volume: ArchiveMultiVolume }
+export type ArchiveMultiVolume = { is_multi_volume: boolean; archives: string[] }
 export type Codepage = "SHIFT_JIS" | "GB2312" | "BIG5" | "UTF_8" | { other: number }
 export type DeletedArchiveEvent = [string, string | null]
 export type Fs = { name: string; modified: string | null; parent: string | null }
 export type FsNode = { type: "None" } | ({ type: "Dir" } & Fs) | ({ type: "File" } & Fs)
 export type FsTreeNode = FsNode
 export type IoError = string
-export type SevenzError = "NotFound7z" | { NeedPassword: string } | { CommandError: string } | { CommandIoError: IoError } | { InvalidUtf8: string }
+export type SevenzError = "NotFound7z" | { NeedPassword: string } | { CommandError: string } | { CommandIoError: IoError } | { InvalidUtf8: string } | { UnsupportedFile: string } | { MultiVolumeArchive: string[] }
+export type ShowArchiveContentsEvent = SpectaResult<ArchiveContents, SevenzError>
+export type SpectaResult<T, E> = { status: "ok"; data: T } | { status: "error"; error: E }
 export type Target = { dir: string; canInput: boolean }
 export type UnzipedArchiveEvent = [string, UnzipedArchiveStatus]
 export type UnzipedArchiveStatus = { Ok: string } | "Running" | "Completed"

@@ -19,7 +19,7 @@ import './AppSidebar.css'
 
 export function AppSidebar() {
     const theme = import.meta.env.__UNO_THEME__
-    const isSmall = createMediaQuery(`(max-width: ${theme.breakpoints.sm})`)
+    const isSmall = createMediaQuery(`(max-width: ${theme.breakpoints.md})`)
     const { open, toggleSidebar } = useSidebar()
 
     createEffect(() => {

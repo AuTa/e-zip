@@ -1,4 +1,4 @@
-use std::{error::Error, ffi::OsString, fmt::Display, io};
+use std::{error::Error, ffi::OsString, fmt::Display, io, path::PathBuf};
 
 use serde::Serialize;
 use specta::Type;
@@ -20,6 +20,10 @@ pub enum SevenzError {
     ReqwestError(#[from] ReqwestError),
     #[error("无效的 UTF-8 字符串: {0}")]
     InvalidUtf8(String),
+    #[error("不支持的文件: {0:?}")]
+    UnsupportedFile(PathBuf),
+    #[error("分卷压缩文件")]
+    MultiVolumeArchive(Vec<PathBuf>),
 }
 
 #[derive(Debug)]

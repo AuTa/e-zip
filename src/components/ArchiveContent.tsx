@@ -2,12 +2,12 @@ import { type Component, createMemo, Index, Match, Show, Switch } from 'solid-js
 import type { FsNode } from '../bindings'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '~/components/ui/accordion'
 
-import type { FileContents } from './ArchiveContents'
+import type { FileTree } from './ArchiveContents'
 
 type ExcludeFsNode = Exclude<FsNode, { type: 'None' }>
 
 export const ArchiveContent: Component<{
-    contents: FileContents
+    contents: FileTree
 }> = props => {
     const contents = () => props.contents
 

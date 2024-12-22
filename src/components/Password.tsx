@@ -73,7 +73,18 @@ export const Password: Component = () => {
                 )}
             >
                 <Flex class="flex-wrap">
-                    <ComboboxLabel class={cn(labelVariants(), 'lg:basis-full', 'my-2', 'font-semibold', 'mr-2', 'flex-shrink-0')}>
+                    <ComboboxLabel
+                        class={cn(
+                            labelVariants(),
+                            'basis-full',
+                            'lg:basis-full',
+                            'sm:basis-auto',
+                            'my-2',
+                            'font-semibold',
+                            'mr-2',
+                            'flex-shrink-0',
+                        )}
+                    >
                         密码列表
                     </ComboboxLabel>
                     <Flex class="flex-1">

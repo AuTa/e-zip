@@ -60,7 +60,7 @@ export const TargetDir: Component = () => {
         <form onSubmit={e => e.preventDefault()}>
             <TextField value={targetDir()} onChange={setTargetDir} readOnly={!canInput()}>
                 <Flex class="flex-wrap">
-                    <TextFieldLabel class="lg:basis-full my-2 font-semibold mr-2">解压路径</TextFieldLabel>
+                    <TextFieldLabel class="basis-full lg:basis-full sm:basis-auto my-2 font-semibold mr-2">解压路径</TextFieldLabel>
                     <Flex class="flex-1">
                         <TextFieldInput type="text" ref={input} class="pr-20" />
                         <Flex justifyContent="end" class="w-auto ml-[-100%] mr-1">
