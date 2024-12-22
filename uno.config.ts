@@ -28,7 +28,7 @@ export default defineConfig<PresetUnoTheme>({
             ...theme,
             breakpoints: {
                 ...theme.breakpoints,
-                // sm: '360px',
+                sm: '480px',
                 // md: '480px',
                 lg: '960px',
             },

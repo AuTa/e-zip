@@ -26,7 +26,7 @@
                 "useNamingConvention": "error"
             }
         },
-        "ignore": ["**/bindings.ts", "uno.config.ts"]
+        "ignore": ["**/bindings.ts", "uno.config.ts", "**/components/ui/*"]
     },
     "javascript": {
         "formatter": {

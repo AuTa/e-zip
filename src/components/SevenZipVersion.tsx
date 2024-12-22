@@ -24,16 +24,16 @@ export const SevenZipVersion: Component = () => {
     return (
         <>
             <Show when={version.loading}>
-                <p>Loading...</p>
+                <span>Loading...</span>
             </Show>
             <Switch>
                 <Match when={version.error}>
-                    <p>
+                    <span>
                         7z not found.<Button onClick={downloadSevenZip}>Download</Button>
-                    </p>
+                    </span>
                 </Match>
                 <Match when={version()}>
-                    <p>{versionShort()}</p>
+                    <span>{versionShort()}</span>
                 </Match>
             </Switch>
         </>

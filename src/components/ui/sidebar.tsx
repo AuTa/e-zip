@@ -59,7 +59,8 @@ function useSidebar() {
 
 export function useIsMobile(fallback = false) {
   const [isMobile, setIsMobile] = createSignal(fallback)
-
+  return isMobile
+  
   createEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
     const onChange = () => {

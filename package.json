@@ -30,7 +30,7 @@
     },
     "devDependencies": {
         "@biomejs/biome": "^1.9.4",
-        "@iconify-json/material-symbols-light": "^1.2.10",
+        "@iconify-json/material-symbols-light": "^1.2.12",
         "@tauri-apps/cli": "^2.1.0",
         "@types/node": "^22.10.2",
         "@unocss/rule-utils": "^0.65.1",

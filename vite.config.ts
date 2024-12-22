@@ -3,8 +3,12 @@ import path from 'node:path'
 import { defineConfig } from 'vite'
 import solid from 'vite-plugin-solid'
 import unoCss from 'unocss/vite'
+import { createGenerator, type PresetUnoTheme, type UnoGenerator } from 'unocss'
+
+import config from './uno.config'
 
 const host = process.env.TAURI_DEV_HOST
+const unoCtx = createGenerator(config)
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
@@ -35,5 +39,10 @@ export default defineConfig(async () => ({
         alias: {
             '~': path.resolve(__dirname, './src'),
         },
+    },
+    define: {
+        // https://github.com/unocss/unocss/discussions/1908#discussioncomment-4371270
+        'import.meta.evn.__UNO__': await unoCtx,
+        'import.meta.env.__UNO_THEME__':(await unoCtx).config.theme,
     },
 }))
