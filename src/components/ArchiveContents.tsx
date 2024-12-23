@@ -131,7 +131,7 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                 file.codepage = contents.codepage
                 file.count = handleFileCount(contents.tree)
                 if (contents.multiVolume) {
-                    file.path = contents.multiVolume.volumes[0]
+                    file.path = contents.multiVolume.volumes[0] ?? path
                     file.multiVolume = contents.multiVolume
                 }
             }),

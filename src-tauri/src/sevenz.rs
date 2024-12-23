@@ -365,7 +365,7 @@ fn sevenz_list_command<P: AsRef<Path>>(
                 .take_while(|line| *line != "----------")
                 .for_each(|line| {
                     let line_type = LineType::new(line);
-                    if let Some(LineType::Volumes(volumes)) = line_type {
+                    if let Some(LineType::Volumes(volumes @ 2..)) = line_type {
                         let multi_volume = archive_multi_volume(&archive_path, volumes);
                         archive.set_multi_volume(multi_volume);
                     }
