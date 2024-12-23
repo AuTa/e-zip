@@ -9,8 +9,8 @@ import { type DeletedArchiveEvent, commands } from '../bindings'
 import { useAppConfig } from './Config'
 
 export const DeleteUnzipedArchiveButton: Component<{
-    paths: string[]
-    recentlyUnzipedPath: string
+    paths: (string | string[])[]
+    recentlyUnzipedPath: (string | string[])
     onRemove: (path: string) => void
 }> = props => {
     const [appConfig, setAppConfig] = useAppConfig()
@@ -29,7 +29,7 @@ export const DeleteUnzipedArchiveButton: Component<{
         }
     }
 
-    const deleteArchives = async (paths: string[]) => {
+    const deleteArchives = async (paths: (string | string[])[]) => {
         const onEvent = new Channel<DeletedArchiveEvent>()
         onEvent.onmessage = ([path, error]) => {
             if (error) {
@@ -38,7 +38,7 @@ export const DeleteUnzipedArchiveButton: Component<{
                 props.onRemove(path)
             }
         }
-        await commands.deleteArchives(paths, onEvent)
+        await commands.deleteArchives(paths.flat(), onEvent)
     }
 
     createEffect(() => {

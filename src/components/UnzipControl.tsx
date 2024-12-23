@@ -11,8 +11,8 @@ export const UnzipControl: Component<{
     files: {
         files: FileStore[]
     }
-    unzipedPaths: string[]
-    recentlyUnzipedPath: string
+    unzipedPaths: (string | string[])[]
+    recentlyUnzipedPath: string | string[]
     onUnzipedArchive: (event: UnzipedArchiveEvent) => void
     onRemove: (path: string) => void
 }> = props => {

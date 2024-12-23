@@ -22,8 +22,6 @@ pub enum SevenzError {
     InvalidUtf8(String),
     #[error("不支持的文件: {0:?}")]
     UnsupportedFile(PathBuf),
-    #[error("分卷压缩文件")]
-    MultiVolumeArchive(Vec<PathBuf>),
 }
 
 #[derive(Debug)]

@@ -1,5 +1,5 @@
 import { TauriEvent, listen, type Event } from '@tauri-apps/api/event'
-import { Index, Show, createSignal, type Component, type ComponentProps } from 'solid-js'
+import { For, Index, Show, createSignal, type Component, type ComponentProps } from 'solid-js'
 import { createStore, produce } from 'solid-js/store'
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '~/components/ui/accordion'
@@ -36,6 +36,7 @@ export type FileTree = {
 type ArchiveTree = ArchiveContents & {
     tree: FileTree
 }
+
 type ArchiveExtend = {
     contents: FileTree
     count: FileCounter
@@ -44,19 +45,24 @@ type ArchiveExtend = {
 
 export type FileStore = ArchiveContents & ArchiveExtend
 
-function newArchiveExtend(): ArchiveExtend {
-    return {
-        contents: { value: { type: 'None' }, children: [], unziped: false },
-        count: createFileCount(),
-        unzippingFile: '',
-    }
-}
-function newFileStore(path: string): FileStore {
+function newArchiveContents(path: string): ArchiveContents {
     return {
         path,
         password: null,
         codepage: null,
-        ...newArchiveExtend(),
+        multiVolume: null,
+    }
+}
+
+const defaultArchiveExtend: ArchiveExtend = {
+    contents: { value: { type: 'None' }, children: [], unziped: false },
+    count: createFileCount(),
+    unzippingFile: '',
+}
+function newFileStore(path: string): FileStore {
+    return {
+        ...newArchiveContents(path),
+        ...defaultArchiveExtend,
     }
 }
 
@@ -75,8 +81,8 @@ function createFileCount(): FileCounter {
 
 export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props => {
     const [files, setFiles] = createStore({ files: [] as FileStore[] })
-    const [unzipedPaths, setUnzipedPaths] = createStore([] as string[])
-    const [recentlyUnzipedPath, setRecentlyUnzipedPath] = createSignal('')
+    const [unzipedPaths, setUnzipedPaths] = createStore([] as (string | string[])[])
+    const [recentlyUnzipedPath, setRecentlyUnzipedPath] = createSignal<string | string[]>('')
     const [password] = usePasswordInput()
 
     listen(TauriEvent.DRAG_DROP, async event => {
@@ -96,19 +102,38 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
             if (typeof error === 'string') {
             } else if ('UnsupportedFile' in error) {
                 console.error('UnsupportedFile', error.UnsupportedFile)
-                setFiles('files', files.files.filter(f => f.path !== error.UnsupportedFile))
+                setFiles(
+                    'files',
+                    files.files.filter(f => f.path !== error.UnsupportedFile),
+                )
             }
             return
         }
         const contents = result.data as ArchiveTree
+        let path = contents.path
+        if (contents.multiVolume) {
+            const actualPath = contents.multiVolume.actualPath
+            if (path !== actualPath && files.files.some(f => f.path === path)) {
+                setFiles(
+                    'files',
+                    files.files.filter(f => f.path !== actualPath),
+                )
+            } else {
+                path = actualPath
+            }
+        }
         setFiles(
             'files',
-            f => f.path === contents.path,
+            f => f.path === path,
             produce(file => {
                 file.password = contents.password
                 file.contents = contents.tree
                 file.codepage = contents.codepage
                 file.count = handleFileCount(contents.tree)
+                if (contents.multiVolume) {
+                    file.path = contents.multiVolume.volumes[0]
+                    file.multiVolume = contents.multiVolume
+                }
             }),
         )
     }
@@ -149,8 +174,9 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                 }
                 const fileStore = files.files[index]
                 if (isUnzipComplated(index)) {
-                    setUnzipedPaths(unzipedPaths.length, fileStore.path)
-                    setRecentlyUnzipedPath(fileStore.path)
+                    const paths = fileStore.multiVolume ? fileStore.multiVolume.volumes : fileStore.path
+                    setUnzipedPaths(unzipedPaths.length, paths)
+                    setRecentlyUnzipedPath(paths)
                 }
                 return
             }
@@ -203,12 +229,15 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
     }
 
     const removeArchive = (path: string) => {
+        const fileStore = files.files.find(f => f.path === path)
+        const paths = fileStore?.multiVolume ? fileStore.multiVolume.volumes : path
+
         setFiles(
             'files',
             files.files.filter(f => f.path !== path),
         )
-        setUnzipedPaths(unzipedPaths.filter(p => p !== path))
-        if (recentlyUnzipedPath() === path) {
+        setUnzipedPaths(unzipedPaths.filter(p => p !== paths))
+        if (recentlyUnzipedPath() === paths) {
             setRecentlyUnzipedPath('')
         }
     }
@@ -219,8 +248,7 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
             'files',
             file => file.path === path,
             produce(file => {
-                const extend = newArchiveExtend()
-                Object.assign(file, extend)
+                Object.assign(file, defaultArchiveExtend)
                 // file.contents = { value: { type: 'None' }, children: [], unziped: false }
                 // file.count = createFileCount()
                 // file.unzippingFile = ''
@@ -250,7 +278,7 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                         <AccordionItem value={`item-${index}`} class="">
                             <AccordionTrigger class="w-full hover:decoration-none">
                                 <Flex justifyContent="start" class="flex-wrap min-w-50% gap-2 text-xs">
-                                    <Tooltip>
+                                    <Tooltip fitViewport={true}>
                                         {/* placement start&end error. */}
                                         <TooltipTrigger
                                             as="span"
@@ -261,7 +289,7 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                                                 .path.split(/[\\\/]/)
                                                 .pop()}
                                         </TooltipTrigger>
-                                        <TooltipContent>{item().path}</TooltipContent>
+                                        <TooltipContent class="text-xs text-wrap">{item().path}</TooltipContent>
                                     </Tooltip>
                                     <Separator />
                                     <span class="text-muted-foreground">{`📁 ${item().count.dir[1]}/${item().count.dir[0]}`}</span>
@@ -274,6 +302,18 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                                     />
                                     <Show when={item().password}>
                                         <Badge class="">{item().password}</Badge>
+                                    </Show>
+                                    <Show when={item().multiVolume}>
+                                        {value => (
+                                            <Tooltip>
+                                                <TooltipTrigger as={Badge} variant="outline" class="">
+                                                    分卷：{value().volumes.length}
+                                                </TooltipTrigger>
+                                                <TooltipContent class="text-xs">
+                                                    <For each={value().volumes}>{volume => <div>{volume.split(/[\\\/]/).pop()}</div>}</For>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        )}
                                     </Show>
                                     <Show when={item().unzippingFile}>
                                         <span class="text-muted-foreground">Unzipping: {item().unzippingFile}</span>

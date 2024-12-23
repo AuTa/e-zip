@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    convert::identity,
     fs, io,
     num::NonZeroUsize,
     path::{Path, PathBuf},
@@ -16,19 +15,21 @@ use lru::LruCache;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use strum::{IntoEnumIterator, VariantNames};
+use strum::{Display, EnumIter, IntoEnumIterator, VariantNames};
 use tauri_plugin_http::reqwest;
 use time::{format_description::well_known::Iso8601, OffsetDateTime, PrimitiveDateTime};
 use time_tz::{system::get_timezone, PrimitiveDateTimeExt};
 
 use crate::config;
 use error::SevenzError;
-use fs_tree::{ArchiveContents, ArchiveMultiVolume};
+use fs_tree::ArchiveContents;
+use multi_volume::{archive_multi_volume, get_first_volume};
 
 pub mod codepage;
 pub mod delete;
 pub mod error;
 pub mod fs_tree;
+pub mod multi_volume;
 pub mod unzip;
 
 static SEVENZ_COMMAND: LazyLock<Mutex<Option<String>>> = LazyLock::new(|| {
@@ -220,26 +221,34 @@ pub struct Archive {
 }
 
 // 显示压缩文件内容.
-pub fn show_archive_content<P>(
-    file_path: P,
+pub fn show_archive_content<P: AsRef<Path>>(
+    archive_path: P,
     password: &str,
     codepage: OptionalCodepage,
     app_config: &config::AppConfig,
-) -> Result<fs_tree::ArchiveContents, SevenzError>
-where
-    P: AsRef<Path>,
-{
+) -> Result<ArchiveContents, SevenzError> {
+    let mut file_path = archive_path.as_ref().to_path_buf();
     // 判断文件是否是文件夹.
-    if !file_path.as_ref().is_file() {
-        return Err(SevenzError::UnsupportedFile(
-            file_path.as_ref().to_path_buf(),
-        ));
+    if !file_path.is_file() {
+        return Err(SevenzError::UnsupportedFile(file_path));
     }
+
+    let first_volume = get_first_volume(&file_path);
+    if let Some(multi_volume) = first_volume {
+        file_path = multi_volume;
+    }
+
+    let wrap_result = |mut result: ArchiveContents| {
+        if result.is_multi_volume() {
+            result.set_actual_path(archive_path.as_ref().to_path_buf());
+        }
+        Ok(result)
+    };
 
     let mut current_password = password.to_owned();
     let mut result = sevenz_list_command(&file_path, &current_password, codepage.clone());
-    if result.is_ok() {
-        return result;
+    if let Ok(result) = result {
+        return wrap_result(result);
     }
 
     let mut passwords = app_config.passwords().into_iter().peekable();
@@ -247,7 +256,7 @@ where
 
     loop {
         match result {
-            Ok(_) => return result,
+            Ok(result) => return wrap_result(result),
             Err(e) => match e {
                 SevenzError::NeedPassword(_) if passwords.peek().is_some() => {
                     let password = passwords.next().unwrap();
@@ -281,26 +290,21 @@ impl OutputFile {
     }
 }
 
-#[derive(strum::Display, strum::EnumIter)]
+#[derive(Display, EnumIter)]
 enum Prefix {
     Path,
     Folder,
     Attributes,
     Modified,
-    Multivolume,
-    #[strum(serialize = "Volume Index")]
-    VolumeIndex,
     Volumes,
 }
 
-#[derive(strum::Display, strum::VariantNames)]
+#[derive(Display, VariantNames)]
 enum LineType {
     Path(String),
     Folder(bool),
     Attributes(bool),
     Modified(OffsetDateTime),
-    Multivolume(bool),
-    VolumeIndex(usize),
     Volumes(usize),
 }
 
@@ -339,32 +343,38 @@ impl LineType {
                     let offset_datetime = datetime.assume_timezone_utc(get_timezone().unwrap());
                     LineType::Modified(offset_datetime)
                 }
-                Prefix::Multivolume => LineType::Multivolume(value == "+"),
-                Prefix::VolumeIndex => LineType::VolumeIndex(value.parse().unwrap()),
                 Prefix::Volumes => LineType::Volumes(value.parse().unwrap()),
             })
         })
     }
 }
 
-fn sevenz_list_command<P>(
+fn sevenz_list_command<P: AsRef<Path>>(
     archive_path: P,
     password: &str,
     codepage: OptionalCodepage,
-) -> Result<fs_tree::ArchiveContents, SevenzError>
-where
-    P: AsRef<Path>,
-{
+) -> Result<fs_tree::ArchiveContents, SevenzError> {
     let output = sevenz_list_command_output(&archive_path, password, codepage.clone());
     match output {
         Ok(s) => {
+            let mut archive = ArchiveContents::new(archive_path.as_ref().to_path_buf());
+
             let mut lines = s.lines();
-            let mut base = lines.by_ref().take_while(|line| *line != "----------");
-            let base = archive_multi_volume(&archive_path, &mut base);
+            lines
+                .by_ref()
+                .take_while(|line| *line != "----------")
+                .for_each(|line| {
+                    let line_type = LineType::new(line);
+                    if let Some(LineType::Volumes(volumes)) = line_type {
+                        let multi_volume = archive_multi_volume(&archive_path, volumes);
+                        archive.set_multi_volume(multi_volume);
+                    }
+                });
 
             let groups = lines
+                // TODO: take_while skip_while 是否包含 "----------"?
                 // .skip_while(|line| *line != "----------")
-                .skip(1) // 跳过 "----------".
+                // .skip(1) // 跳过 "----------".
                 .fold(vec![vec![]], |mut groups, line| {
                     if line.is_empty() {
                         groups.push(vec![]);
@@ -400,12 +410,7 @@ where
                         Some(LineType::Modified(datetime)) => {
                             modified = Some(datetime);
                         }
-                        Some(
-                            LineType::Multivolume(_)
-                            | LineType::VolumeIndex(_)
-                            | LineType::Volumes(_),
-                        )
-                        | None => {}
+                        Some(LineType::Volumes(_)) | None => {}
                     };
                 }
                 Ok(OutputFile {
@@ -415,10 +420,10 @@ where
                 })
             });
 
-            let mut archive = output_files.rev().try_fold(
+            output_files.rev().try_fold(
                 // NOTE: try_fold
-                ArchiveContents::new(archive_path.as_ref().to_path_buf()),
-                |mut tree, file| match file {
+                &mut archive,
+                |tree, file| match file {
                     Ok(file) => {
                         file.cache_modified(archive_path.as_ref().to_path_buf());
                         tree.append_file(file);
@@ -438,14 +443,11 @@ where
     }
 }
 
-fn sevenz_list_command_output<P>(
+fn sevenz_list_command_output<P: AsRef<Path>>(
     archive_path: P,
     password: &str,
     codepage: OptionalCodepage,
-) -> Result<String, SevenzError>
-where
-    P: AsRef<Path>,
-{
+) -> Result<String, SevenzError> {
     let mut command = sevenz_command()?;
     command.args(LIST_COMMAND_ARGS);
     if !password.is_empty() {
@@ -459,15 +461,12 @@ where
     let output = command.output();
     match output {
         Ok(output) => {
-            println!("output: {:?}", output.status);
             if output.status.success() {
                 Ok(String::from_utf8_lossy(&output.stdout).to_string())
             } else if need_password(&output) || wrong_password(&output) {
                 Err(SevenzError::NeedPassword(
                     archive_path.as_ref().as_os_str().into(),
                 ))
-            } else if handers_error(&output) {
-                Ok(String::from_utf8_lossy(&output.stdout).to_string())
             } else {
                 Err(SevenzError::CommandError(
                     String::from_utf8_lossy(&output.stdout).to_string(),
@@ -498,68 +497,4 @@ fn need_password(output: &Output) -> bool {
 fn wrong_password(output: &Output) -> bool {
     let output_str = String::from_utf8_lossy(&output.stderr);
     output.status.code() == Some(2) && output_str.contains("Wrong password?")
-}
-
-fn handers_error(output: &Output) -> bool {
-    let output_str = String::from_utf8_lossy(&output.stdout);
-    output.status.code() == Some(2) && output_str.contains("Headers Error")
-}
-
-fn archive_multi_volume<'a, P>(
-    archive_path: P,
-    lines: &mut impl Iterator<Item = &'a str>,
-) -> ArchiveMultiVolume
-where
-    P: AsRef<Path>,
-{
-    let mut is_multi_volume = false;
-    let mut volume_index = 0;
-    let mut volumes_left = 0; // include current volume.
-    for line in lines {
-        let line_type = LineType::new(line);
-        match line_type {
-            Some(LineType::Multivolume(b)) => {
-                is_multi_volume = b;
-            }
-            Some(LineType::VolumeIndex(i)) => {
-                volume_index = i;
-            }
-            Some(LineType::Volumes(i)) => {
-                volumes_left = i;
-            }
-            Some(
-                LineType::Path(_)
-                | LineType::Folder(_)
-                | LineType::Attributes(_)
-                | LineType::Modified(_),
-            )
-            | None => {}
-        };
-    }
-
-    let mut multi = ArchiveMultiVolume::default();
-    if is_multi_volume {
-        let regex = Regex::new(
-            r"(?<name>.*)\.part(?<rar>\d+)\.rar|\.r(?<r>\d+)|\.(?<ext>7z|zip)\.(?<z>\d+)",
-        )
-        .unwrap();
-        let file_name = archive_path
-            .as_ref()
-            .file_name()
-            .unwrap()
-            .to_string_lossy()
-            .to_string();
-        let captures = regex.captures(&file_name);
-        println!("captures: {:?} file: {}", captures, file_name);
-        if let Some(captures) = captures {
-            if let Some(part) = captures.iter().skip(1).find_map(identity) {
-                let current_rank: usize = part.as_str().parse().unwrap();
-                for i in 0..(volume_index + volumes_left) {
-                    let rank = i + current_rank - volume_index;
-                    println!("rank: {}", rank);
-                }
-            }
-        }
-    }
-    multi
 }

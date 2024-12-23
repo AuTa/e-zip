@@ -12,7 +12,7 @@ use time::OffsetDateTime;
 
 use crate::sevenz::archives_have_root_dir;
 
-use super::{OptionalCodepage, OutputFile};
+use super::{multi_volume::ArchiveMultiVolume, OptionalCodepage, OutputFile};
 
 #[derive(Debug, Serialize, Clone, Type, Default)]
 pub struct Fs {
@@ -150,31 +150,15 @@ fn sort_recursion(children: Vec<NodeId>, tree: &mut Tree<FsNode>) {
     }
 }
 
-#[derive(Default, Debug, Clone, Serialize, Type)]
-pub struct ArchiveMultiVolume {
-    is_multi_volume: bool,
-    archives: Vec<PathBuf>,
-}
-
-impl ArchiveMultiVolume {
-    pub fn set_multi_volume(&mut self, is_multi_volume: bool) {
-        self.is_multi_volume = is_multi_volume;
-    }
-
-    pub fn append_archive(&mut self, archive: PathBuf) {
-        self.is_multi_volume = true;
-        self.archives.push(archive);
-    }
-}
-
 #[derive(Debug, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct ArchiveContents {
     path: PathBuf,
     #[specta(skip)]
     tree: FsTree,
     password: Option<String>,
     codepage: OptionalCodepage,
-    multi_volume: ArchiveMultiVolume,
+    multi_volume: Option<ArchiveMultiVolume>,
 }
 
 impl ArchiveContents {
@@ -184,7 +168,7 @@ impl ArchiveContents {
             tree: FsTree(Tree::new(FsNode::None)),
             password: None,
             codepage: None,
-            multi_volume: ArchiveMultiVolume::default(),
+            multi_volume: None,
         }
     }
 
@@ -227,8 +211,22 @@ impl ArchiveContents {
         self.tree.sort();
     }
 
+    /// Whether the archive is a multi-volume archive.
+    ///
+    /// Returns `true` if the archive is a multi-volume archive, or `false` otherwise.
+    pub fn is_multi_volume(&self) -> bool {
+        self.multi_volume.is_some()
+    }
+
     pub fn set_multi_volume(&mut self, multi_volume: ArchiveMultiVolume) {
-        self.multi_volume = multi_volume;
+        self.multi_volume = Some(multi_volume);
+    }
+
+    /// If the archive is a multi-volume archive, set the actual path of the first volume of the archive.
+    pub fn set_actual_path(&mut self, actual_path: PathBuf) {
+        if let Some(multi_volume) = &mut self.multi_volume {
+            multi_volume.set_actual_path(actual_path);
+        }
     }
 }
 

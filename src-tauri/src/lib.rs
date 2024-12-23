@@ -12,7 +12,7 @@ use sevenz::{
 };
 use specta::Type;
 use specta_typescript::Typescript;
-use tauri::{ipc::Channel, AppHandle, Emitter, Manager, State};
+use tauri::{ipc::Channel, AppHandle, Manager, State};
 use tauri_specta::{collect_commands, collect_events, Builder, Event};
 
 mod config;
@@ -81,7 +81,6 @@ async fn refresh_archive_contents(
     password: String,
 ) -> Result<(), String> {
     let app_config = app_config.lock().unwrap().clone();
-    println!("{:?} extract", archive);
 
     let result =
         sevenz::show_archive_content(&archive.path, &password, archive.codepage, &app_config);
