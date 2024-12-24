@@ -31,8 +31,8 @@ ego-tree = { version = "0.10.0", features = ["serde"] }
 specta = { version = "2.0.0-rc.20", features = ["time"] }
 specta-typescript = "0.0.7"
 tauri-specta = { version = "=2.0.0-rc.20", features = ["derive", "typescript"] }
+specta-util = { version = "0.0.7", features = ["serde"] }
 notify = "7"
-serde-error = "0.1.3"
 trash = "5.2.0"
 toml = "0.8.19"
 regex = "1.11.1"

@@ -13,7 +13,7 @@ async check7zVersion() : Promise<Result<string, SevenzError>> {
     else return { status: "error", error: e  as any };
 }
 },
-async download7z() : Promise<Result<null, string>> {
+async download7z() : Promise<Result<null, SevenzError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("download_7z") };
 } catch (e) {
@@ -32,7 +32,7 @@ async unzipArchives(archives: Archive[], targetDir: string, globalPassword: stri
 async deleteArchives(paths: string[], onEvent: TAURI_CHANNEL<DeletedArchiveEvent>) : Promise<void> {
     await TAURI_INVOKE("delete_archives", { paths, onEvent });
 },
-async showArchivesContents(paths: string[], password: string) : Promise<Result<null, string>> {
+async showArchivesContents(paths: string[], password: string) : Promise<Result<null, null>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("show_archives_contents", { paths, password }) };
 } catch (e) {
@@ -85,13 +85,12 @@ unzipedArchiveEvent: "unziped-archive-event"
 
 export type AppConfig = { target: Target; autoDelete: boolean; passwords: string[] }
 export type Archive = { path: string; password: string | null; codepage: Codepage | null }
-export type ArchiveContents = { path: string; password: string | null; codepage: Codepage | null; multiVolume: ArchiveMultiVolume | null }
+export type ArchiveContents = { path: string; contents: unknown; password: string | null; codepage: Codepage | null; multiVolume: ArchiveMultiVolume | null }
 export type ArchiveMultiVolume = { volumes: string[]; actualPath: string }
 export type Codepage = "SHIFT_JIS" | "GB2312" | "BIG5" | "UTF_8" | { other: number }
 export type DeletedArchiveEvent = [string, string | null]
 export type Fs = { name: string; modified: string | null; parent: string | null }
 export type FsNode = { type: "None" } | ({ type: "Dir" } & Fs) | ({ type: "File" } & Fs)
-export type FsTreeNode = FsNode
 export type IoError = string
 export type SevenzError = "NotFound7z" | { NeedPassword: string } | { CommandError: string } | { CommandIoError: IoError } | { InvalidUtf8: string } | { UnsupportedFile: string }
 export type ShowArchiveContentsEvent = SpectaResult<ArchiveContents, SevenzError>

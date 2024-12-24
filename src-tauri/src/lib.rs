@@ -5,11 +5,7 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use sevenz::{
-    error::SevenzError,
-    fs_tree::{ArchiveContents, FsTreeNode},
-    Archive,
-};
+use sevenz::{codepage::OptionalCodepage, error::SevenzError, fs_tree::{ArchiveContents, FsNode}, Archive};
 use specta::Type;
 use specta_typescript::Typescript;
 use tauri::{ipc::Channel, AppHandle, Manager, State};
@@ -27,12 +23,9 @@ fn check_7z_version(app: AppHandle) -> Result<String, sevenz::error::SevenzError
 
 #[tauri::command]
 #[specta::specta]
-async fn download_7z(app: AppHandle) -> Result<(), String> {
+async fn download_7z(app: AppHandle) -> Result<(), sevenz::error::SevenzError> {
     let config_dir = app.path().app_config_dir().unwrap();
-    match sevenz::download_7z(&config_dir).await {
-        Ok(_) => Ok(()),
-        Err(err) => Err(err.to_string()),
-    }
+    sevenz::download_7z(&config_dir).await
 }
 
 #[derive(Serialize, Debug, Clone, Type)]
@@ -54,6 +47,19 @@ impl<T, E> From<Result<T, E>> for SpectaResult<T, E> {
 #[derive(Serialize, Debug, Clone, Type, Event)]
 pub struct ShowArchiveContentsEvent<'a>(SpectaResult<&'a ArchiveContents, &'a SevenzError>);
 
+impl ShowArchiveContentsEvent<'_> {
+    pub fn process(
+        app: AppHandle,
+        archive_path: PathBuf,
+        password: String,
+        codepage: OptionalCodepage,
+        app_config: &config::AppConfig,
+    ) -> tauri::Result<()> {
+        let result = sevenz::show_archive_content(archive_path, &password, codepage, app_config);
+        ShowArchiveContentsEvent(result.as_ref().into()).emit(&app)
+    }
+}
+
 #[tauri::command]
 #[specta::specta]
 async fn show_archives_contents(
@@ -61,7 +67,7 @@ async fn show_archives_contents(
     app_config: State<'_, Mutex<config::AppConfig>>,
     paths: Vec<PathBuf>,
     password: String,
-) -> Result<(), String> {
+) -> Result<(), ()> {
     let app_config = app_config.lock().unwrap().clone();
     for path in paths {
         let result = sevenz::show_archive_content(&path, &password, None, &app_config);
@@ -163,7 +169,7 @@ pub fn run() {
             UnzipedArchiveEvent,
             ShowArchiveContentsEvent
         ])
-        .typ::<FsTreeNode>()
+        .typ::<FsNode>()
         .typ::<ArchiveContents>();
 
     #[cfg(debug_assertions)] // <- Only export on non-release builds

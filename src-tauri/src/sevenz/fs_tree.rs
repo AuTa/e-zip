@@ -8,6 +8,7 @@ use ego_tree::{NodeId, Tree};
 use regex::Regex;
 use serde::Serialize;
 use specta::{datatype::DataType, NamedType, Type};
+use specta_util::Unknown;
 use time::OffsetDateTime;
 
 use crate::sevenz::archives_have_root_dir;
@@ -68,23 +69,6 @@ impl fmt::Display for FsNode {
             ""
         };
         write!(f, "{flag}{}", self.name())
-    }
-}
-
-#[derive(Debug, Serialize, Clone, Type)]
-pub struct FsTreeNode(FsNode);
-
-impl Deref for FsTreeNode {
-    type Target = FsNode;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl fmt::Display for FsTreeNode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
     }
 }
 
@@ -154,8 +138,8 @@ fn sort_recursion(children: Vec<NodeId>, tree: &mut Tree<FsNode>) {
 #[serde(rename_all = "camelCase")]
 pub struct ArchiveContents {
     path: PathBuf,
-    #[specta(skip)]
-    tree: FsTree,
+    #[specta(type = Unknown)]
+    contents: FsTree,
     password: Option<String>,
     codepage: OptionalCodepage,
     multi_volume: Option<ArchiveMultiVolume>,
@@ -165,7 +149,7 @@ impl ArchiveContents {
     pub fn new(path: PathBuf) -> Self {
         ArchiveContents {
             path,
-            tree: FsTree(Tree::new(FsNode::None)),
+            contents: FsTree(Tree::new(FsNode::None)),
             password: None,
             codepage: None,
             multi_volume: None,
@@ -173,7 +157,7 @@ impl ArchiveContents {
     }
 
     pub fn append_file(&mut self, file: OutputFile) {
-        self.tree.append_file(file);
+        self.contents.append_file(file);
     }
 
     /// Whether the archive has a root directory.
@@ -187,7 +171,7 @@ impl ArchiveContents {
         match map.get(&self.path) {
             Some(b) if !update => *b,
             _ => {
-                let b = self.tree.root().children().count() <= 1;
+                let b = self.contents.root().children().count() <= 1;
                 map.insert(self.path.clone(), b);
                 b
             }
@@ -208,7 +192,7 @@ impl ArchiveContents {
     }
 
     pub fn sort(&mut self) {
-        self.tree.sort();
+        self.contents.sort();
     }
 
     /// Whether the archive is a multi-volume archive.
@@ -279,11 +263,11 @@ impl fmt::Display for FsTree {
 
 impl fmt::Display for ArchiveContents {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{}\n{}", self.path.display(), self.tree)
+        writeln!(f, "{}\n{}", self.path.display(), self.contents)
     }
 }
 
-// https://github.com/specta-rs/specta/issues/285 Recursive structs cause a stack overflow
+// TODO: https://github.com/specta-rs/specta/issues/285 Recursive structs cause a stack overflow
 #[derive(Serialize, Type)]
 pub struct SpectaNode<'a, T> {
     value: &'a T,
@@ -295,7 +279,7 @@ impl Type for FsTree {
         type_map: &mut specta::TypeMap,
         generics: specta::Generics,
     ) -> specta::datatype::DataType {
-        SpectaNode::<FsTreeNode>::inline(type_map, generics)
+        SpectaNode::<FsNode>::inline(type_map, generics)
     }
 
     fn reference(
@@ -308,20 +292,20 @@ impl Type for FsTree {
 
 impl NamedType for FsTree {
     fn sid() -> specta::SpectaID {
-        SpectaNode::<FsTreeNode>::sid()
+        SpectaNode::<FsNode>::sid()
     }
 
     fn named_data_type(
         type_map: &mut specta::TypeMap,
         generics: &[DataType],
     ) -> specta::datatype::NamedDataType {
-        SpectaNode::<FsTreeNode>::named_data_type(type_map, generics)
+        SpectaNode::<FsNode>::named_data_type(type_map, generics)
     }
 
     fn definition_named_data_type(
         type_map: &mut specta::TypeMap,
     ) -> specta::datatype::NamedDataType {
-        SpectaNode::<FsTreeNode>::definition_named_data_type(type_map)
+        SpectaNode::<FsNode>::definition_named_data_type(type_map)
     }
 }
 

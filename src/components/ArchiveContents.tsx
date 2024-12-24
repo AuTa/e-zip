@@ -14,7 +14,7 @@ import {
     commands,
     events,
     type Archive,
-    type ArchiveContents,
+    type ArchiveContents as SuperArchiveContents,
     type Codepage,
     type FsNode,
     type ShowArchiveContentsEvent,
@@ -33,12 +33,13 @@ export type FileTree = {
     unziped: boolean
 }
 
-type ArchiveTree = ArchiveContents & {
-    tree: FileTree
+const defaultFileTree: FileTree = { value: { type: 'None' }, children: [], unziped: false }
+
+type ArchiveContents = Omit<SuperArchiveContents, 'contents'> & {
+    contents: FileTree
 }
 
 type ArchiveExtend = {
-    contents: FileTree
     count: FileCounter
     unzippingFile: string
 }
@@ -48,6 +49,7 @@ export type FileStore = ArchiveContents & ArchiveExtend
 function newArchiveContents(path: string): ArchiveContents {
     return {
         path,
+        contents: defaultFileTree,
         password: null,
         codepage: null,
         multiVolume: null,
@@ -55,7 +57,6 @@ function newArchiveContents(path: string): ArchiveContents {
 }
 
 const defaultArchiveExtend: ArchiveExtend = {
-    contents: { value: { type: 'None' }, children: [], unziped: false },
     count: createFileCount(),
     unzippingFile: '',
 }
@@ -109,10 +110,10 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
             }
             return
         }
-        const contents = result.data as ArchiveTree
-        let path = contents.path
-        if (contents.multiVolume) {
-            const actualPath = contents.multiVolume.actualPath
+        const ac = result.data as ArchiveContents
+        let path = ac.path
+        if (ac.multiVolume) {
+            const actualPath = ac.multiVolume.actualPath
             if (path !== actualPath && files.files.some(f => f.path === path)) {
                 setFiles(
                     'files',
@@ -126,13 +127,13 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
             'files',
             f => f.path === path,
             produce(file => {
-                file.password = contents.password
-                file.contents = contents.tree
-                file.codepage = contents.codepage
-                file.count = handleFileCount(contents.tree)
-                if (contents.multiVolume) {
-                    file.path = contents.multiVolume.volumes[0] ?? path
-                    file.multiVolume = contents.multiVolume
+                file.password = ac.password
+                file.contents = ac.contents
+                file.codepage = ac.codepage
+                file.count = handleFileCount(ac.contents)
+                if (ac.multiVolume) {
+                    file.path = ac.multiVolume.volumes[0] ?? path
+                    file.multiVolume = ac.multiVolume
                 }
             }),
         )
@@ -249,9 +250,7 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
             file => file.path === path,
             produce(file => {
                 Object.assign(file, defaultArchiveExtend)
-                // file.contents = { value: { type: 'None' }, children: [], unziped: false }
-                // file.count = createFileCount()
-                // file.unzippingFile = ''
+                file.contents = defaultFileTree
             }),
         )
         const unlisten = await events.showArchiveContentsEvent.listen(event => onDragDrop(event))
@@ -337,4 +336,4 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
     )
 }
 
-export default ArchiveTree
+export default ArchiveContents

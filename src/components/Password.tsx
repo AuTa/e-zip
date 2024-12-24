@@ -91,7 +91,7 @@ export const Password: Component = () => {
                         {/* Control 没有设置高度，Input 设置了高度，但是 border 在 Control 上导致变高了一点。 */}
                         <ComboboxControl
                             aria-label="Password"
-                            class="w-full ring-offset-background focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 h-10"
+                            class="w-full ring-offset-background focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 h-10 border-input"
                         >
                             <ComboboxInput value={password()} class="pr-13 py-2" />
                             <ComboboxTrigger />
