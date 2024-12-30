@@ -4,10 +4,10 @@
     "description": "",
     "type": "module",
     "scripts": {
-        "start": "bunx --bun vite",
-        "dev": "bunx --bun vite",
-        "build": "bunx --bun vite build",
-        "serve": "bunx --bun vite preview",
+        "start": "rsbuild dev",
+        "dev": "rsbuild dev",
+        "build": "rsbuild build",
+        "serve": "rsbuild preview",
         "tauri": "tauri",
         "solidui": "solidui-cli"
     },
@@ -31,11 +31,12 @@
     "devDependencies": {
         "@biomejs/biome": "^1.9.4",
         "@iconify-json/material-symbols-light": "^1.2.12",
+        "@rsbuild/core": "^1.1.13",
+        "@rsbuild/plugin-babel": "^1.0.3",
+        "@rsbuild/plugin-solid": "^1.0.4",
         "@tauri-apps/cli": "^2.1.0",
         "@types/node": "^22.10.2",
-        "@unocss/rule-utils": "^0.65.3",
-        "buffer": "^6.0.3",
-        "chardet": "^2.0.0",
+        "@unocss/webpack": "^0.65.3",
         "solidui-cli": "^0.7.1",
         "typescript": "^5.7.2",
         "unocss": "^0.65.3",
@@ -43,8 +44,6 @@
         "unocss-preset-chinese": "^0.3.3",
         "unocss-preset-color": "link:unocss-preset-color",
         "unocss-preset-scrollbar": "^0.3.1",
-        "unocss-preset-shadcn": "^0.3.1",
-        "vite": "^6.0.6",
-        "vite-plugin-solid": "^2.11.0"
+        "unocss-preset-shadcn": "^0.3.1"
     }
 }

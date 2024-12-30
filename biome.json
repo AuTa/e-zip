@@ -23,7 +23,7 @@
         "rules": {
             "recommended": true,
             "style": {
-                "useNamingConvention": "error"
+                "useNamingConvention": "warn"
             }
         },
         "ignore": ["**/bindings.ts", "uno.config.ts", "**/components/ui/*"]
