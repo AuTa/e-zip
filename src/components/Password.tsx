@@ -1,6 +1,5 @@
 import { Label as ComboboxLabel } from '@kobalte/core/combobox'
 import { createContext, createSignal, useContext, type Component, type ContextProviderComponent } from 'solid-js'
-import { createStore } from 'solid-js/store'
 
 import { Button } from '~/components/ui/button'
 import {
@@ -39,8 +38,7 @@ export function usePasswordInput() {
 }
 
 export const Password: Component = () => {
-    const [appConfig] = useAppConfig()
-    const [passwords, setPasswords] = createStore(appConfig.passwords)
+    const { passwords, setPasswords } = useAppConfig()
 
     const [password, setPassword] = usePasswordInput()
 
@@ -49,12 +47,12 @@ export const Password: Component = () => {
     }
 
     const addPassword = () => {
-        if (passwords.includes(password())) return
-        setPasswords([...passwords, password()])
+        if (passwords().includes(password())) return
+        setPasswords([...passwords(), password()])
     }
 
     const removePassword = () => {
-        setPasswords(passwords.filter(p => p !== password()))
+        setPasswords(passwords().filter(p => p !== password()))
         setPassword('')
     }
 
@@ -62,7 +60,7 @@ export const Password: Component = () => {
         <form onSubmit={e => e.preventDefault()}>
             <Combobox
                 name="passwords"
-                options={passwords}
+                options={passwords()}
                 onInputChange={onInputChange}
                 placeholder="Password..."
                 itemComponent={props => (

@@ -36,6 +36,10 @@ export default defineConfig(
             dev: {
                 // hmr: !!host,
                 // client: { protocol: 'ws', host: 'localhost', port: 1421 },
+                watchFiles: {
+                    paths: ['uno.config.ts'],
+                    type: 'reload-server',
+                },
             },
             tools: {
                 rspack: {

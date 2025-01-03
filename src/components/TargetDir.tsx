@@ -1,5 +1,5 @@
 import { open } from '@tauri-apps/plugin-dialog'
-import { type Component, type ContextProviderComponent, createContext, createEffect, createSignal, Show, useContext } from 'solid-js'
+import { type Component, type ContextProviderComponent, createContext, createEffect, createSignal, onMount, Show, useContext } from 'solid-js'
 
 import { Button } from '~/components/ui/button'
 import { Flex } from '~/components/ui/flex'
@@ -8,8 +8,8 @@ import { Toggle } from '~/components/ui/toggle'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
 import { useAppConfig } from './Config'
 
-export const makeTargetDirContext = (dir: string) => {
-    return createSignal(dir)
+export const makeTargetDirContext = (dir?: string) => {
+    return createSignal(dir ?? '')
 }
 type TargetDirContextType = ReturnType<typeof makeTargetDirContext>
 
@@ -28,13 +28,17 @@ export function useTargetDir() {
 }
 
 export const TargetDir: Component = () => {
-    const [appConfig, setAppConfig] = useAppConfig()
+    const { target, setTarget } = useAppConfig()
     const [targetDir, setTargetDir] = useTargetDir()
-    const [canInput, setCanInput] = createSignal(appConfig.target.canInput)
+    const [canInput, setCanInput] = createSignal(target().canInput)
+
+    onMount(() => {
+        setTargetDir(target().dir)
+    })
 
     createEffect(() => {
-        createEffect(() => setAppConfig('target', { dir: targetDir() }))
-        createEffect(() => setAppConfig('target', { canInput: canInput() }))
+        createEffect(() => setTarget('dir', targetDir()))
+        createEffect(() => setTarget('canInput', canInput()))
     })
 
     let input: HTMLInputElement | undefined

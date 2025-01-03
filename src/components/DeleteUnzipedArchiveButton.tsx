@@ -1,6 +1,6 @@
 import { Channel } from '@tauri-apps/api/core'
 import type { Component, JSX } from 'solid-js'
-import { createEffect, createSignal } from 'solid-js'
+import { createEffect } from 'solid-js'
 
 import { Button } from '~/components/ui/button'
 import { Flex } from '~/components/ui/flex'
@@ -10,21 +10,19 @@ import { useAppConfig } from './Config'
 
 export const DeleteUnzipedArchiveButton: Component<{
     paths: (string | string[])[]
-    recentlyUnzipedPath: (string | string[])
+    recentlyUnzipedPath: string | string[]
     onRemove: (path: string) => void
 }> = props => {
-    const [appConfig, setAppConfig] = useAppConfig()
-    const [isAuto, setIsAuto] = createSignal(appConfig.autoDelete)
-
-    createEffect(() => setAppConfig('autoDelete', isAuto()))
+    const { autoDelete, setAutoDelete } = useAppConfig()
+    // const [autoDelete, setAutoDelete] = autoDeleteSignal
 
     const setAuto = (value: 'Auto' | 'Manual' | null) => {
         switch (value) {
             case 'Auto':
-                setIsAuto(true)
+                setAutoDelete(true)
                 break
             case 'Manual':
-                setIsAuto(false)
+                setAutoDelete(false)
                 break
         }
     }
@@ -42,7 +40,7 @@ export const DeleteUnzipedArchiveButton: Component<{
     }
 
     createEffect(() => {
-        if (isAuto()) {
+        if (autoDelete()) {
             createEffect(async () => {
                 if (props.recentlyUnzipedPath) {
                     await deleteArchives([props.recentlyUnzipedPath])
@@ -59,12 +57,12 @@ export const DeleteUnzipedArchiveButton: Component<{
     return (
         <Flex class="inline-flex w-auto">
             <Button on:click={deleteArchiveHandler} class="rounded-r-none">
-                {isAuto() ? 'Auto' : 'Manual'}删除
+                {autoDelete() ? 'Auto' : 'Manual'}删除
             </Button>
 
             <Select
-                value={isAuto() ? 'Auto' : 'Manual'}
-                defaultValue={isAuto() ? 'Auto' : 'Manual'}
+                value={autoDelete() ? 'Auto' : 'Manual'}
+                defaultValue={autoDelete() ? 'Auto' : 'Manual'}
                 onChange={setAuto}
                 options={['Auto', 'Manual']}
                 placement="bottom-end"

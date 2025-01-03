@@ -1,5 +1,9 @@
 {
   "compilerOptions": {
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
     "composite": true,
     "skipLibCheck": true,
     "module": "ESNext",
@@ -8,5 +12,8 @@
     "allowImportingTsExtensions": true,
     "emitDeclarationOnly": true
   },
-  "include": ["vite.config.ts", "uno.config.ts"]
+  "include": [
+    "vite.config.ts",
+    "uno.config.ts"
+  ]
 }

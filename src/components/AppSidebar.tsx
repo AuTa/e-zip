@@ -1,6 +1,7 @@
-import { A } from '@solidjs/router'
 import { createMediaQuery } from '@solid-primitives/media'
+import { A } from '@solidjs/router'
 import { createEffect } from 'solid-js'
+import type { PresetUnoTheme } from 'unocss'
 
 import {
     Sidebar,
@@ -18,8 +19,8 @@ import { SevenZipVersion } from './SevenZipVersion'
 import './AppSidebar.css'
 
 export function AppSidebar() {
-    const theme = import.meta.env.__UNO_THEME__
-    const isSmall = createMediaQuery(`(max-width: ${theme.breakpoints.md})`)
+    const theme = import.meta.env.__UNO_THEME__ as PresetUnoTheme
+    const isSmall = createMediaQuery(`(max-width: ${theme.breakpoints?.md})`)
     const { open, toggleSidebar } = useSidebar()
 
     createEffect(() => {

@@ -1,7 +1,7 @@
-import { transformThemeString } from '@unocss/rule-utils'
-import { defineConfig, presetIcons, PresetUnoTheme, presetWind, transformerDirectives, transformerVariantGroup } from 'unocss'
+import { defineConfig, presetIcons, type PresetUnoTheme, presetWind, transformerDirectives, transformerVariantGroup } from 'unocss'
 import presetAnimations from 'unocss-preset-animations'
 import presetChinese, { chineseTypography } from 'unocss-preset-chinese'
+import { presetColor } from 'unocss-preset-color/src/index.ts'
 import { presetScrollbar } from 'unocss-preset-scrollbar'
 import { presetShadcn } from 'unocss-preset-shadcn'
 
@@ -9,18 +9,6 @@ export default defineConfig<PresetUnoTheme>({
     theme: {
         spacing: {
             4: '1rem',
-        },
-        colors: {
-            sidebar: {
-                DEFAULT: 'hsl(var(--sidebar-background))',
-                foreground: 'hsl(var(--sidebar-foreground))',
-                primary: 'hsl(var(--sidebar-primary))',
-                'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-                accent: 'hsl(var(--sidebar-accent))',
-                'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-                border: 'hsl(var(--sidebar-border))',
-                ring: 'hsl(var(--sidebar-ring))',
-            },
         },
     },
     extendTheme: theme => {
@@ -35,7 +23,7 @@ export default defineConfig<PresetUnoTheme>({
         }
     },
     presets: [
-        presetWind({dark:  {dark: '[data-kb-theme="dark"]'}}),
+        presetWind({ dark: { dark: '[data-kb-theme="dark"]' } }),
         presetIcons({
             scale: 1.3,
         }),
@@ -43,7 +31,7 @@ export default defineConfig<PresetUnoTheme>({
         presetShadcn({
             color: {
                 base: 'green',
-                name: 'white-green',
+                name: 'whitegreen',
                 light: {
                     background: '60 4% 95%',
                     foreground: '86 54% 17%',
@@ -95,26 +83,24 @@ export default defineConfig<PresetUnoTheme>({
             chineseType: 'simplified',
         }),
         presetScrollbar(),
-    ],
-    rules: [
-        [
-            /^text-(.*)$/,
-            ([, c], { theme }) => {
-                if (typeof c === 'string') {
-                    c = c.replace('-', '.')
-                    c = 'textColors.' + c
-                    let color = transformThemeString(c, theme, false)
-                    if (!color) {
-                        c = c.replace('textColors.', 'colors.')
-                        color = transformThemeString(c, theme, false)
-                    }
-                    if (color) {
-                        return { color: color }
-                    }
-                }
+        presetColor({
+            colors: {
+                sidebar: {
+                    DEFAULT: 'hsl(var(--sidebar-background))',
+                    foreground: 'hsl(var(--sidebar-foreground))',
+                    primary: 'hsl(var(--sidebar-primary))',
+                    'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+                    accent: 'hsl(var(--sidebar-accent))',
+                    'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+                    border: 'hsl(var(--sidebar-border))',
+                    ring: 'hsl(var(--sidebar-ring))',
+                },
             },
-        ],
+            contrast: true,
+            fallback: true,
+        }),
     ],
+    rules: [],
     preflights: [
         {
             getCSS: ({ theme }) => `
@@ -125,5 +111,5 @@ export default defineConfig<PresetUnoTheme>({
             `,
         },
     ],
-    transformers: [transformerVariantGroup(), transformerDirectives()],
+    transformers: [transformerVariantGroup(), transformerDirectives({ enforce: 'pre' })],
 })
