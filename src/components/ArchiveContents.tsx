@@ -42,9 +42,10 @@ type ArchiveContents = Omit<SuperArchiveContents, 'contents'> & {
 type ArchiveExtend = {
     count: FileCounter
     unzippingFile: string
+    unzipStatus: null | 'Running' | 'Completed'
 }
 
-export type FileStore = ArchiveContents & ArchiveExtend
+export type FileStore = ArchiveContents & ArchiveExtend & { id: number }
 
 function newArchiveContents(path: string): ArchiveContents {
     return {
@@ -59,11 +60,14 @@ function newArchiveContents(path: string): ArchiveContents {
 const defaultArchiveExtend: ArchiveExtend = {
     count: createFileCount(),
     unzippingFile: '',
+    unzipStatus: null,
 }
-function newFileStore(path: string): FileStore {
+
+function newFileStore(path: string, id: number): FileStore {
     return {
         ...newArchiveContents(path),
         ...defaultArchiveExtend,
+        id: id,
     }
 }
 
@@ -86,10 +90,17 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
     const [recentlyUnzipedPath, setRecentlyUnzipedPath] = createSignal<string | string[]>('')
     const [password] = usePasswordInput()
 
+    const [expandedItem, setExpandedItem] = createSignal<string[]>([])
+
     listen(TauriEvent.DRAG_DROP, async event => {
         const payload = event.payload as { paths: string[]; position: { x: number; y: number } }
         const { paths } = payload
-        const path2Files = paths.filter(p => !files.files.some(f => f.path === p)).map(p => newFileStore(p))
+        let id = files.files.length === 0 ? 0 : files.files[files.files.length - 1].id + 1
+        const path2Files = paths
+            .filter(p => !files.files.some(f => f.path === p))
+            .map(p => {
+                return newFileStore(p, id++)
+            })
         setFiles('files', [...files.files, ...path2Files])
         const unlisten = await events.showArchiveContentsEvent.listen(event => onDragDrop(event))
         await commands.showArchivesContents(paths, password()).finally(() => unlisten())
@@ -135,6 +146,7 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                     file.path = ac.multiVolume.volumes[0] ?? path
                     file.multiVolume = ac.multiVolume
                 }
+                setExpandedItem(prev => [...prev, `item-${file.id}`])
             }),
         )
     }
@@ -165,7 +177,7 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
         const [archivePath, unzipedArchiveStatus] = event
         if (typeof unzipedArchiveStatus === 'string') {
             if (unzipedArchiveStatus === 'Running') {
-                // TODO: show loading
+                setFiles('files', file => file.path === archivePath, 'unzipStatus', 'Running')
                 return
             }
             if (unzipedArchiveStatus === 'Completed') {
@@ -173,8 +185,9 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                 if (index === -1) {
                     return
                 }
+                setFiles('files', file => file.path === archivePath, 'unzipStatus', 'Completed')
                 const fileStore = files.files[index]
-                if (isUnzipComplated(index)) {
+                if (isUnzipComplated(fileStore.id)) {
                     const paths = fileStore.multiVolume ? fileStore.multiVolume.volumes : fileStore.path
                     setUnzipedPaths(unzipedPaths.length, paths)
                     setRecentlyUnzipedPath(paths)
@@ -224,8 +237,9 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
         }
     }
 
-    const isUnzipComplated = (index: number) => {
-        const count = files.files[index].count
+    const isUnzipComplated = (id: number) => {
+        const count = files.files.find(f => f.id === id)?.count
+        if (!count) return false
         return (count.dir[1] > 0 || count.file[1] > 0) && count.dir[0] === count.dir[1] && count.file[0] === count.file[1]
     }
 
@@ -241,6 +255,7 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
         if (recentlyUnzipedPath() === paths) {
             setRecentlyUnzipedPath('')
         }
+        setExpandedItem(prev => prev.filter(item => item !== `item-${fileStore?.id}`))
     }
 
     const refreshArchive = async (path: string) => {
@@ -271,38 +286,28 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                 onUnzipedArchive={handleUnzipedFile}
                 onRemove={removeArchive}
             />
-            <Accordion collapsible defaultValue={['item-0']} class="mt-4 overflow-auto scrollbar-none">
-                <Index each={files.files}>
-                    {(item, index) => (
-                        <AccordionItem value={`item-${index}`} class="">
+            <Accordion multiple value={expandedItem()} onChange={setExpandedItem} class="mt-4 overflow-auto scrollbar-none">
+                <For each={files.files}>
+                    {item => (
+                        <AccordionItem value={`item-${item.id}`} class="">
                             <AccordionTrigger class="w-full hover:decoration-none">
-                                <Flex justifyContent="start" class="flex-wrap min-w-50% gap-2 text-xs">
+                                <Flex justifyContent="start" class="flex-wrap min-w-50% gap-1 text-xs">
                                     <Tooltip fitViewport={true}>
                                         {/* placement start&end error. */}
                                         <TooltipTrigger
                                             as="span"
                                             class="basis-full text-align-left text-sm font-semibold truncate hover:(inline-flex)"
-                                            classList={{ 'color-violet-400': isUnzipComplated(index) }}
+                                            classList={{ 'color-violet-400': isUnzipComplated(item.id) }}
                                         >
-                                            {item()
-                                                .path.split(/[\\\/]/)
-                                                .pop()}
+                                            {item.path.split(/[\\\/]/).pop()}
                                         </TooltipTrigger>
-                                        <TooltipContent class="text-xs text-wrap">{item().path}</TooltipContent>
+                                        <TooltipContent class="text-xs text-wrap">{item.path}</TooltipContent>
                                     </Tooltip>
                                     <Separator />
-                                    <span class="text-muted-foreground">{`📁 ${item().count.dir[1]}/${item().count.dir[0]}`}</span>
-                                    <span class="text-muted-foreground">{`📄 ${item().count.file[1]}/${item().count.file[0]}`}</span>
+                                    <span class="text-muted-foreground">{`📁 ${item.count.dir[1]}/${item.count.dir[0]}`}</span>
+                                    <span class="text-muted-foreground">{`📄 ${item.count.file[1]}/${item.count.file[0]}`}</span>
 
-                                    <CodepageButton
-                                        codepage={item().codepage}
-                                        setCodepage={(codepage: Codepage | null) => handleSetCodepage(item().path, codepage)}
-                                        onRefresh={() => refreshArchive(item().path)}
-                                    />
-                                    <Show when={item().password}>
-                                        <Badge class="">{item().password}</Badge>
-                                    </Show>
-                                    <Show when={item().multiVolume}>
+                                    <Show when={item.multiVolume}>
                                         {value => (
                                             <Tooltip>
                                                 <TooltipTrigger as={Badge} variant="outline" class="">
@@ -314,23 +319,36 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                                             </Tooltip>
                                         )}
                                     </Show>
-                                    <Show when={item().unzippingFile}>
-                                        <span class="text-muted-foreground">Unzipping: {item().unzippingFile}</span>
-                                    </Show>
+                                    {item.unzipStatus}
                                 </Flex>
-                                <RefreshArchiveButton onRefresh={() => refreshArchive(item().path)} class="flex-shrink-0" />
-                                <RemoveArchiveButton onRemove={() => removeArchive(item().path)} class="flex-shrink-0" />
+                                <RefreshArchiveButton onRefresh={() => refreshArchive(item.path)} class="flex-shrink-0" disabled={item.unzipStatus === 'Running'}/>
+                                <RemoveArchiveButton
+                                    onRemove={() => removeArchive(item.path)}
+                                    class="flex-shrink-0"
+                                    disabled={item.unzipStatus === 'Running'}
+                                />
                             </AccordionTrigger>
                             <AccordionContent>
+                                <CodepageButton
+                                    codepage={item.codepage}
+                                    setCodepage={(codepage: Codepage | null) => handleSetCodepage(item.path, codepage)}
+                                    onRefresh={() => refreshArchive(item.path)}
+                                />
+                                <Show when={item.password}>
+                                    <Badge class="">{item.password}</Badge>
+                                </Show>
+                                <Show when={item.unzippingFile}>
+                                    <span class="text-muted-foreground">Unzipping: {item.unzippingFile}</span>
+                                </Show>
                                 <Accordion collapsible>
-                                    <Index each={item().contents.children.length > 1 ? [item().contents] : item().contents.children}>
+                                    <Index each={item.contents.children.length > 1 ? [item.contents] : item.contents.children}>
                                         {child => <ArchiveContent contents={child()} />}
                                     </Index>
                                 </Accordion>
                             </AccordionContent>
                         </AccordionItem>
                     )}
-                </Index>
+                </For>
             </Accordion>
         </Grid>
     )

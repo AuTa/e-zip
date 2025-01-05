@@ -13,11 +13,12 @@ export const RefreshArchiveButton: Component<MyButtonProps> = props => {
         event.stopPropagation()
         props.onRefresh()
     }
-    const [local] = splitProps(props, ['class'])
+
+    const [local, others] = splitProps(props, ['class', 'onRefresh'])
 
     return (
         <Tooltip>
-            <TooltipTrigger as={Button} onClick={onClick} variant="ghost" size="sm" class={cn('text-base px-2', local.class)}>
+            <TooltipTrigger as={Button} onClick={onClick} variant="ghost" size="sm" class={cn('text-base px-2', local.class)} {...others}>
                 <div class="i-material-symbols-light-refresh-rounded" />
             </TooltipTrigger>
             <TooltipContent>Refresh Archive</TooltipContent>

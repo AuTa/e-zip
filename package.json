@@ -34,7 +34,7 @@
         "@rsbuild/core": "^1.1.13",
         "@rsbuild/plugin-babel": "^1.0.3",
         "@rsbuild/plugin-solid": "^1.0.4",
-        "@tauri-apps/cli": "^2.2.0",
+        "@tauri-apps/cli": "^2.2.2",
         "@types/node": "^22.10.5",
         "@unocss/webpack": "^0.65.3",
         "solidui-cli": "^0.7.1",
@@ -42,7 +42,7 @@
         "unocss": "^0.65.3",
         "unocss-preset-animations": "^1.1.0",
         "unocss-preset-chinese": "^0.3.3",
-        "unocss-preset-color": "0.0.0",
+        "unocss-preset-color": "^0.0.2",
         "unocss-preset-scrollbar": "^0.3.1",
         "unocss-preset-shadcn": "^0.3.1"
     }

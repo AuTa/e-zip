@@ -97,7 +97,7 @@ export default defineConfig<PresetUnoTheme>({
                 },
             },
             contrast: true,
-            fallback: true,
+            dark: { dark: '[data-kb-theme="dark"]' },
         }),
     ],
     rules: [],

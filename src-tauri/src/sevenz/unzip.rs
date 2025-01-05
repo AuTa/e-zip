@@ -8,6 +8,7 @@ use std::{
 
 use notify::{event, RecursiveMode, Watcher};
 use notify_debouncer_full::{new_debouncer, DebounceEventResult, Debouncer, FileIdCache};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri_specta::Event;
@@ -82,8 +83,8 @@ struct ArchiveCount {
     file: u32,
 }
 
-const  FOLDERS_LINE: &str = "Folders: ";
-const  FILES_LINE: &str = "Files: ";
+const FOLDERS_LINE: &str = "Folders: ";
+const FILES_LINE: &str = "Files: ";
 
 fn sevenz_test(archive: &Archive, password: Option<String>) -> Option<ArchiveCount> {
     let mut command = sevenz_command().unwrap();
@@ -356,7 +357,12 @@ impl TempTargetDir {
             let mut extension = 0;
             while sub_path.try_exists().unwrap_or(false) {
                 extension += 1;
-                sub_path.set_extension(extension.to_string());
+                if extension == 1 {
+                    // TODO: unstable add_extension
+                    sub_path.as_mut_os_string().push(format!(".{extension}"));
+                } else {
+                    sub_path.set_extension(extension.to_string());
+                }
             }
             let _ = fs::rename(path, &sub_path);
             result = Some(sub_path);

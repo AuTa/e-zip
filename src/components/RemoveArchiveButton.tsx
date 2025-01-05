@@ -14,11 +14,11 @@ export const RemoveArchiveButton: Component<MyButtonProps> = props => {
         props.onRemove()
     }
 
-    const [local] = splitProps(props, ['class'])
+    const [local, others] = splitProps(props, ['class', 'onRemove'])
 
     return (
         <Tooltip>
-            <TooltipTrigger as={Button} onClick={onClick} variant="ghost" size="sm" class={cn('text-base px-2', local.class)}>
+            <TooltipTrigger as={Button} onClick={onClick} variant="ghost" size="sm" class={cn('text-base px-2', local.class)} {...others}>
                 <div class="i-material-symbols-light-clear-all-rounded" />
             </TooltipTrigger>
             <TooltipContent>Remove Archive</TooltipContent>
