@@ -85,7 +85,7 @@ unzipedArchiveEvent: "unziped-archive-event"
 
 export type AppConfig = { target: Target; autoDelete: boolean; passwords: string[] }
 export type Archive = { path: string; password: string | null; codepage: Codepage | null }
-export type ArchiveContents = { path: string; contents: unknown; password: string | null; codepage: Codepage | null; multiVolume: ArchiveMultiVolume | null }
+export type ArchiveContents = { path: string; contents: unknown; password: string | null; codepage: Codepage | null; multiVolume: ArchiveMultiVolume | null; hasRootDir: boolean }
 export type ArchiveMultiVolume = { volumes: string[]; actualPath: string }
 export type Codepage = "SHIFT_JIS" | "GB2312" | "BIG5" | "UTF_8" | { other: number }
 export type DeletedArchiveEvent = [string, string | null]

@@ -26,7 +26,6 @@ import { usePasswordInput } from './Password'
 import { RefreshArchiveButton } from './RefreshArchiveButton'
 import { RemoveArchiveButton } from './RemoveArchiveButton'
 import { UnzipControl } from './UnzipControl'
-import { LoadingSpinner } from './ui/loading-spinner'
 import { LoadingArchiveButton } from './LoadingArchiveButton'
 
 export type FileTree = {
@@ -56,6 +55,7 @@ function newArchiveContents(path: string): ArchiveContents {
         password: null,
         codepage: null,
         multiVolume: null,
+        hasRootDir: false,
     }
 }
 
@@ -143,7 +143,7 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                 file.password = ac.password
                 file.contents = ac.contents
                 file.codepage = ac.codepage
-                file.count = handleFileCount(ac.contents)
+                file.count = handleFileCount(ac.contents, ac.hasRootDir)
                 if (ac.multiVolume) {
                     file.path = ac.multiVolume.volumes[0] ?? path
                     file.multiVolume = ac.multiVolume
@@ -153,10 +153,10 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
         )
     }
 
-    const handleFileCount = (contents: FileTree): FileCounter => {
+    const handleFileCount = (contents: FileTree, hasRootDir:boolean): FileCounter => {
         const count = createFileCount()
         // 如果没有根文件夹, 解压的时候会添加.
-        if (contents.children.length > 1) {
+        if (!hasRootDir) {
             count.dir[0] += 1
         }
         const handleSetCount = (contents: FileTree) => {
@@ -208,7 +208,7 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
             const [, setFileStore] = createStore(fileStore)
             for (const [i, part] of parts.entries()) {
                 // 如果没有根文件夹, 解压的时候会添加, 所以要从第一个开始.
-                const addRootDir = i === 0 && contents.children.length > 1
+                const addRootDir = i === 0 && !fileStore.hasRootDir
                 const [children, setChildren] = addRootDir ? createStore([contents]) : createStore(contents.children)
                 for (const [j, child] of children.entries()) {
                     const value = child.value
@@ -332,14 +332,14 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                                     }
                                 >
                                     <Match when={item.unzipStatus === 'Running'}>
-                                        <LoadingArchiveButton type="long" class="flex-shrink-0"/>
+                                        <LoadingArchiveButton type="long" class="flex-shrink-0" />
                                     </Match>
                                 </Switch>
 
                                 <RemoveArchiveButton
                                     onRemove={() => removeArchive(item.path)}
                                     class="flex-shrink-0"
-                                    disabled={item.unzipStatus === 'Running'}
+                                    disabled={files.files.some(f => f.unzipStatus === 'Running')}
                                 />
                             </AccordionTrigger>
                             <AccordionContent>
@@ -355,7 +355,7 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                                     <span class="text-muted-foreground">Unzipping: {item.unzippingFile}</span>
                                 </Show>
                                 <Accordion collapsible>
-                                    <Index each={item.contents.children.length > 1 ? [item.contents] : item.contents.children}>
+                                    <Index each={!item.hasRootDir ? [item.contents] : item.contents.children}>
                                         {child => <ArchiveContent contents={child()} />}
                                     </Index>
                                 </Accordion>

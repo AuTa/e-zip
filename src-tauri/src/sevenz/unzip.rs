@@ -8,7 +8,6 @@ use std::{
 
 use notify::{event, RecursiveMode, Watcher};
 use notify_debouncer_full::{new_debouncer, DebounceEventResult, Debouncer, FileIdCache};
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri_specta::Event;
@@ -104,6 +103,10 @@ fn sevenz_test(archive: &Archive, password: Option<String>) -> Option<ArchiveCou
                 archive_count.file = line.replace(FILES_LINE, "").parse().unwrap();
             }
         });
+        // 只有一个文件时, 7z test 不输出 Folders 和 Files.
+        if archive_count.folder == 0 && archive_count.file == 0 {
+            archive_count.file = 1;
+        }
         return Some(archive_count);
     }
     None

@@ -435,7 +435,7 @@ fn sevenz_list_command<P: AsRef<Path>>(
             archive.sort();
             archive.set_password(password);
             archive.set_codepage(codepage);
-            archive.has_root_dir(true);
+            archive.set_has_root_dir();
 
             Ok(archive)
         }

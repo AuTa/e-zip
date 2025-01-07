@@ -116,6 +116,15 @@ impl FsTree {
 
         sort_recursion(children, self);
     }
+
+    fn only_one_root_dir(&self) -> bool {
+        let count = self.root().children().count();
+        match count {
+            0 => true,
+            1 => self.root().first_child().unwrap().value().is_dir(),
+            _ => false,
+        }
+    }
 }
 
 fn sort_recursion(children: Vec<NodeId>, tree: &mut Tree<FsNode>) {
@@ -143,6 +152,7 @@ pub struct ArchiveContents {
     password: Option<String>,
     codepage: OptionalCodepage,
     multi_volume: Option<ArchiveMultiVolume>,
+    has_root_dir: bool,
 }
 
 impl ArchiveContents {
@@ -153,6 +163,7 @@ impl ArchiveContents {
             password: None,
             codepage: None,
             multi_volume: None,
+            has_root_dir: false,
         }
     }
 
@@ -160,22 +171,11 @@ impl ArchiveContents {
         self.contents.append_file(file);
     }
 
-    /// Whether the archive has a root directory.
-    ///
-    /// If `update` is `true`, always parse the archive to determine if it has a root directory.
-    /// If `update` is `false`, use the cached result or parse the archive if not cached.
-    ///
-    /// Returns `true` if the archive has a root directory, or `false` otherwise.
-    pub fn has_root_dir(&self, update: bool) -> bool {
+    pub fn set_has_root_dir(&mut self) -> bool {
+        self.has_root_dir = self.contents.only_one_root_dir();
         let mut map = archives_have_root_dir();
-        match map.get(&self.path) {
-            Some(b) if !update => *b,
-            _ => {
-                let b = self.contents.root().children().count() <= 1;
-                map.insert(self.path.clone(), b);
-                b
-            }
-        }
+        map.insert(self.path.clone(), self.has_root_dir);
+        self.has_root_dir
     }
 
     pub fn set_password<S: Into<String>>(&mut self, password: S) {
