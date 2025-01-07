@@ -4,11 +4,11 @@ import { Button } from '~/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
 import { cn } from '~/lib/utils'
 
-interface MyButtonProps extends ComponentProps<typeof Button> {
+interface RefreshArchiveButtonProps extends ComponentProps<typeof Button> {
     onRefresh: () => void
 }
 
-export const RefreshArchiveButton: Component<MyButtonProps> = props => {
+export const RefreshArchiveButton: Component<RefreshArchiveButtonProps> = props => {
     const onClick: JSX.EventHandler<Element, Event> = event => {
         event.stopPropagation()
         props.onRefresh()

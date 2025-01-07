@@ -25,7 +25,7 @@ export default defineConfig<PresetUnoTheme>({
     presets: [
         presetWind({ dark: { dark: '[data-kb-theme="dark"]' } }),
         presetIcons({
-            scale: 1.3,
+            scale: 1.25,
         }),
         presetAnimations(),
         presetShadcn({

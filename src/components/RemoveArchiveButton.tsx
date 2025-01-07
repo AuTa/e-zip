@@ -4,11 +4,11 @@ import { Button } from '~/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
 import { cn } from '~/lib/utils'
 
-interface MyButtonProps extends ComponentProps<typeof Button> {
+interface RemoveArchiveButtonProps extends ComponentProps<typeof Button> {
     onRemove: () => void
 }
 
-export const RemoveArchiveButton: Component<MyButtonProps> = props => {
+export const RemoveArchiveButton: Component<RemoveArchiveButtonProps> = props => {
     const onClick: JSX.EventHandler<Element, Event> = event => {
         event.stopPropagation()
         props.onRemove()

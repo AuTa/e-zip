@@ -1,5 +1,5 @@
 import { TauriEvent, listen, type Event } from '@tauri-apps/api/event'
-import { For, Index, Show, createSignal, type Component, type ComponentProps } from 'solid-js'
+import { For, Index, Match, Show, Switch, createSignal, type Component, type ComponentProps } from 'solid-js'
 import { createStore, produce } from 'solid-js/store'
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '~/components/ui/accordion'
@@ -26,6 +26,8 @@ import { usePasswordInput } from './Password'
 import { RefreshArchiveButton } from './RefreshArchiveButton'
 import { RemoveArchiveButton } from './RemoveArchiveButton'
 import { UnzipControl } from './UnzipControl'
+import { LoadingSpinner } from './ui/loading-spinner'
+import { LoadingArchiveButton } from './LoadingArchiveButton'
 
 export type FileTree = {
     value: FsNode
@@ -319,9 +321,21 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                                             </Tooltip>
                                         )}
                                     </Show>
-                                    {item.unzipStatus}
                                 </Flex>
-                                <RefreshArchiveButton onRefresh={() => refreshArchive(item.path)} class="flex-shrink-0" disabled={item.unzipStatus === 'Running'}/>
+                                <Switch
+                                    fallback={
+                                        <RefreshArchiveButton
+                                            onRefresh={() => refreshArchive(item.path)}
+                                            class="flex-shrink-0"
+                                            disabled={item.unzipStatus === 'Running'}
+                                        />
+                                    }
+                                >
+                                    <Match when={item.unzipStatus === 'Running'}>
+                                        <LoadingArchiveButton type="long" class="flex-shrink-0"/>
+                                    </Match>
+                                </Switch>
+
                                 <RemoveArchiveButton
                                     onRemove={() => removeArchive(item.path)}
                                     class="flex-shrink-0"
