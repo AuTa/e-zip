@@ -3,6 +3,7 @@ import path from 'node:path'
 import { defineConfig, type RsbuildConfig } from '@rsbuild/core'
 import { pluginBabel } from '@rsbuild/plugin-babel'
 import { pluginSolid } from '@rsbuild/plugin-solid'
+import { pluginTypeCheck } from '@rsbuild/plugin-type-check'
 import { UnoCSSRspackPlugin } from '@unocss/webpack/rspack'
 import { createGenerator } from 'unocss'
 
@@ -27,7 +28,7 @@ export default defineConfig(
                     'import.meta.env.__UNO_THEME__': JSON.stringify((await unoCtx).config.theme),
                 },
             },
-            plugins: [pluginBabel({ include: /\.(?:jsx|tsx)$/, exclude: /[\\/]node_modules[\\/]/ }), pluginSolid()],
+            plugins: [pluginBabel({ include: /\.(?:jsx|tsx)$/, exclude: /[\\/]node_modules[\\/]/ }), pluginSolid(), pluginTypeCheck()],
             server: {
                 port: 1420,
                 strictPort: true,

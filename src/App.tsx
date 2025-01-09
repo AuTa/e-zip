@@ -1,11 +1,11 @@
 import { ColorModeProvider, ColorModeScript, createLocalStorageManager } from '@kobalte/core/color-mode'
-import { createResource, Match, type ParentComponent, Switch } from 'solid-js'
+import type { ParentComponent } from 'solid-js'
 
 import { Flex } from '~/components/ui/flex'
 import { SidebarProvider, SidebarTrigger } from '~/components/ui/sidebar'
 import { AppSidebar } from './components/AppSidebar'
 import { ArchiveContentsComponent } from './components/ArchiveContents'
-import { AppConfigProvider, makeAppConfigContext } from './components/Config'
+import { AppConfigProvider } from './components/Config'
 import { makePasswordInputContext, PasswordInputProvider } from './components/Password'
 import { makeTargetDirContext, TargetDirProvider } from './components/TargetDir'
 
@@ -15,10 +15,6 @@ import { ThemeSelector } from './components/ThemeSelector'
 
 const App: ParentComponent = props => {
     const storageManager = createLocalStorageManager('kb-color-mode')
-
-    const [appConfig] = createResource(async () => {
-        return await makeAppConfigContext()
-    })
 
     return (
         <>
