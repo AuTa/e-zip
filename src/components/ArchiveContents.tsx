@@ -1,6 +1,6 @@
 import { TauriEvent, listen, type Event } from '@tauri-apps/api/event'
 import { For, Index, Match, Show, Switch, createSignal, type Component, type ComponentProps } from 'solid-js'
-import { createStore, produce } from 'solid-js/store'
+import { createStore, produce, reconcile } from 'solid-js/store'
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '~/components/ui/accordion'
 import { Badge } from '~/components/ui/badge'
@@ -143,6 +143,7 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                 file.password = ac.password
                 file.contents = ac.contents
                 file.codepage = ac.codepage
+                file.hasRootDir = ac.hasRootDir
                 file.count = handleFileCount(ac.contents, ac.hasRootDir)
                 if (ac.multiVolume) {
                     file.path = ac.multiVolume.volumes[0] ?? path
@@ -343,6 +344,7 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                                 />
                             </AccordionTrigger>
                             <AccordionContent>
+                            <LoadingArchiveButton type="long" class="flex-shrink-0" />
                                 <CodepageButton
                                     codepage={item.codepage}
                                     setCodepage={(codepage: Codepage | null) => handleSetCodepage(item.path, codepage)}
@@ -354,8 +356,9 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                                 <Show when={item.unzippingFile}>
                                     <span class="text-muted-foreground">Unzipping: {item.unzippingFile}</span>
                                 </Show>
+                                   <span>{item.hasRootDir ? '📂' : '📄'}</span> 
                                 <Accordion collapsible>
-                                    <Index each={!item.hasRootDir ? [item.contents] : item.contents.children}>
+                                    <Index each={item.hasRootDir ?item.contents.children : [item.contents] }>
                                         {child => <ArchiveContent contents={child()} />}
                                     </Index>
                                 </Accordion>
