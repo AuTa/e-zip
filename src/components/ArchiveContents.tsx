@@ -344,7 +344,6 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                                 />
                             </AccordionTrigger>
                             <AccordionContent>
-                            <LoadingArchiveButton type="long" class="flex-shrink-0" />
                                 <CodepageButton
                                     codepage={item.codepage}
                                     setCodepage={(codepage: Codepage | null) => handleSetCodepage(item.path, codepage)}
