@@ -154,7 +154,7 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
         )
     }
 
-    const handleFileCount = (contents: FileTree, hasRootDir:boolean): FileCounter => {
+    const handleFileCount = (contents: FileTree, hasRootDir: boolean): FileCounter => {
         const count = createFileCount()
         // 如果没有根文件夹, 解压的时候会添加.
         if (!hasRootDir) {
@@ -307,8 +307,8 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                                         <TooltipContent class="text-xs text-wrap">{item.path}</TooltipContent>
                                     </Tooltip>
                                     <Separator />
-                                    <span class="text-muted-foreground">{`📁 ${item.count.dir[1]}/${item.count.dir[0]}`}</span>
-                                    <span class="text-muted-foreground">{`📄 ${item.count.file[1]}/${item.count.file[0]}`}</span>
+                                    <span class="text-muted-foreground">{`📁${item.count.dir[1]}/${item.count.dir[0]}`}</span>
+                                    <span class="text-muted-foreground">{`📄${item.count.file[1]}/${item.count.file[0]}`}</span>
 
                                     <Show when={item.multiVolume}>
                                         {value => (
@@ -344,20 +344,21 @@ export const ArchiveContentsComponent: Component<ComponentProps<'div'>> = props 
                                 />
                             </AccordionTrigger>
                             <AccordionContent>
-                                <CodepageButton
-                                    codepage={item.codepage}
-                                    setCodepage={(codepage: Codepage | null) => handleSetCodepage(item.path, codepage)}
-                                    onRefresh={() => refreshArchive(item.path)}
-                                />
-                                <Show when={item.password}>
-                                    <Badge class="">{item.password}</Badge>
-                                </Show>
-                                <Show when={item.unzippingFile}>
-                                    <span class="text-muted-foreground">Unzipping: {item.unzippingFile}</span>
-                                </Show>
-                                   <span>{item.hasRootDir ? '📂' : '📄'}</span> 
+                                <Flex justifyContent='start' class='gap-1'>
+                                    <CodepageButton
+                                        codepage={item.codepage}
+                                        setCodepage={(codepage: Codepage | null) => handleSetCodepage(item.path, codepage)}
+                                        onRefresh={() => refreshArchive(item.path)}
+                                    />
+                                    <Show when={item.password}>
+                                        <Badge class="">{item.password}</Badge>
+                                    </Show>
+                                    <Show when={item.unzippingFile}>
+                                        <span class="text-muted-foreground">Unzipping: {item.unzippingFile}</span>
+                                    </Show>
+                                </Flex>
                                 <Accordion collapsible>
-                                    <Index each={item.hasRootDir ?item.contents.children : [item.contents] }>
+                                    <Index each={item.hasRootDir ? item.contents.children : [item.contents]}>
                                         {child => <ArchiveContent contents={child()} />}
                                     </Index>
                                 </Accordion>

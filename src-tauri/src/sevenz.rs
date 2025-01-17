@@ -469,7 +469,7 @@ fn sevenz_list_command_output<P: AsRef<Path>>(
                 ))
             } else {
                 Err(SevenzError::CommandError(
-                    String::from_utf8_lossy(&output.stdout).to_string(),
+                    String::from_utf8_lossy(&output.stderr).to_string(),
                 ))
             }
         }
