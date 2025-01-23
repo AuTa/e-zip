@@ -1,6 +1,6 @@
 import { TauriEvent, listen, type Event } from '@tauri-apps/api/event'
 import { For, Index, Match, Show, Switch, createSignal, type Component, type ComponentProps } from 'solid-js'
-import { createStore, produce, reconcile } from 'solid-js/store'
+import { createStore, produce } from 'solid-js/store'
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '~/components/ui/accordion'
 import { Badge } from '~/components/ui/badge'
