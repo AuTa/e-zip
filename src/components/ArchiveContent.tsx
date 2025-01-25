@@ -12,27 +12,24 @@ export const ArchiveContent: Component<{
     const contents = () => props.contents
 
     const value = () => contents().value
-    const name = () => {
-        if (value().type === 'None') {
-            return '*'
-        }
-        return (value() as ExcludeFsNode).name
-    }
-
-    const emoji = createMemo(() => {
-        switch (value().type) {
-            case 'None':
-                return "before:content-['📁']"
-            case 'Dir':
-                return "before:content-['📁']"
-            case 'File':
-                return "before:content-['📄']"
-        }
-    })
+    const name = () => (value().type === 'None' ? '*' : (value() as ExcludeFsNode).name)
 
     const emojiNameElement = () => {
+        let emoji: string
+        switch (value().type) {
+            case 'None':
+            case 'Dir':
+                emoji = '📁'
+                break
+            case 'File':
+                emoji = '📄'
+        }
+
         return (
-            <span class={`break-all before:(position-absolute left-0) ${emoji()}`} classList={{ 'color-violet-400': contents().unziped }}>
+            <span
+                class={`break-all before:(position-absolute left-0 content-['${emoji}'])`}
+                classList={{ 'color-violet-400': contents().unziped }}
+            >
                 {name()}
             </span>
         )
