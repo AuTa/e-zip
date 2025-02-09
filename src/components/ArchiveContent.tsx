@@ -1,4 +1,4 @@
-import { type Component, createMemo, Index, Show } from 'solid-js'
+import { type Component, Index, Show } from 'solid-js'
 import type { FsNode } from '../bindings'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '~/components/ui/accordion'
 
