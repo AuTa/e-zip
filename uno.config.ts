@@ -1,4 +1,4 @@
-import { defineConfig, presetIcons, type PresetUnoTheme, presetWind, transformerDirectives, transformerVariantGroup } from 'unocss'
+import { defineConfig, presetIcons, type PresetUnoTheme, presetWind3, transformerDirectives, transformerVariantGroup } from 'unocss'
 import presetAnimations from 'unocss-preset-animations'
 import presetChinese, { chineseTypography } from 'unocss-preset-chinese'
 import { presetColor } from 'unocss-preset-color/src/index.ts'
@@ -23,7 +23,7 @@ export default defineConfig<PresetUnoTheme>({
         }
     },
     presets: [
-        presetWind({ dark: { dark: '[data-kb-theme="dark"]' } }),
+        presetWind3({ dark: { dark: '[data-kb-theme="dark"]' } }),
         presetIcons({
             scale: 1.25,
         }),
