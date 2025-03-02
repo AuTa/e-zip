@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     fs::{self, File, FileTimes},
     path::{Component, Path, PathBuf},
     process::{Command, Stdio},
@@ -78,8 +79,8 @@ const EXTRACT_COMMAND_ARGS: [&str; 3] = ["x", "-aou", "-sccUTF-8"];
 const TEST_COMMAND_ARGS: [&str; 2] = ["t", "-sccUTF-8"];
 
 struct ArchiveCount {
-    folder: u32,
-    file: u32,
+    folder: usize,
+    file: usize,
 }
 
 const FOLDERS_LINE: &str = "Folders: ";
@@ -149,9 +150,8 @@ fn sevenz_extract(
         })
         .expect("7z extract failed"); // PANIC!
 
-    let mut folder_count = 0;
-    let mut file_count = 0; // TODO: from 7z test
-    let mut pre_folder = PathBuf::new();
+    let mut watcher_floder_paths = HashSet::new();
+    let mut watcher_file_paths = HashSet::new();
     loop {
         match child.try_wait() {
             Ok(Some(status)) if !status.success() => {
@@ -159,7 +159,8 @@ fn sevenz_extract(
             }
             // zip maybe lower folder.
             Ok(Some(_))
-                if folder_count >= archive_count.folder && file_count == archive_count.file =>
+                if watcher_floder_paths.len() >= archive_count.folder
+                    && watcher_file_paths.len() == archive_count.file =>
             {
                 break;
             }
@@ -180,22 +181,19 @@ fn sevenz_extract(
                     if *path == temp_dir.path {
                         continue;
                     }
-                    let is_folder = match create_kind {
+                    if watcher_floder_paths.contains(path) || watcher_file_paths.contains(path) {
+                        continue;
+                    }
+                    match match create_kind {
                         event::CreateKind::Folder => true,
                         event::CreateKind::File => false,
                         event::CreateKind::Any => path.is_dir(),
                         _ => true,
-                    };
-                    if is_folder {
-                        folder_count += 1;
-                        pre_folder = path.to_owned();
-                    } else {
-                        file_count += 1;
-                        if path.parent() == Some(&pre_folder) {
-                            // folder_count -= 1;
-                            pre_folder = PathBuf::new();
-                        }
+                    } {
+                        true => &mut watcher_floder_paths,
+                        false => &mut watcher_file_paths,
                     }
+                    .insert(path.to_owned());
                     sender
                         .send((
                             archive.path.clone(),
