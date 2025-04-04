@@ -15,10 +15,13 @@ export const ArchiveContent: Component<{
     const name = () => (value().type === 'None' ? '*' : (value() as ExcludeFsNode).name)
 
     const emojiNameElement = () => {
-        const emoji = value().type === 'None' || value().type === 'Dir' ? '📁' : '📄'
-        const contentEmoji = `before:content-['${emoji}']`
+        enum BeforeContent {
+            Dir = `before:content-['📁']`,
+            File = `before:content-['📄']`,
+        }
+        const content = value().type === 'None' || value().type === 'Dir' ? BeforeContent.Dir : BeforeContent.File
         return (
-            <span class={`break-all before:(position-absolute left-0) ${contentEmoji}`} classList={{ 'color-violet-400': contents().unziped }}>
+            <span class={`break-all before:(position-absolute left-0) ${content}`} classList={{ 'color-violet-400': contents().unziped }}>
                 {name()}
             </span>
         )
